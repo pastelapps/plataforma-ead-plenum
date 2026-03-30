@@ -5,7 +5,6 @@ const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN!
 
 const PUBLIC_PATHS = [
   '/login',
-  '/magic-link',
   '/invite',
   '/verify',
   '/api/webhooks',

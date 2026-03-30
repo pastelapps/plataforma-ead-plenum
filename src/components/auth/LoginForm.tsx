@@ -9,42 +9,47 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError('')
     const supabase = createClient()
-    await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
-    })
-    setSent(true)
-    setLoading(false)
-  }
 
-  if (sent) {
-    return (
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader><CardTitle>Verifique seu email</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Enviamos um link de acesso para <strong>{email}</strong>. Verifique sua caixa de entrada.</p>
-        </CardContent>
-      </Card>
-    )
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setError('Email ou senha incorretos.')
+      setLoading(false)
+      return
+    }
+
+    window.location.href = '/'
   }
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Entrar na plataforma</CardTitle>
-        <CardDescription>Digite seu email para receber um link de acesso</CardDescription>
+        <CardDescription>Use seu email e senha para acessar</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required /></div>
-          <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Enviando...' : 'Enviar link de acesso'}</Button>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
+          </div>
+          <div>
+            <Label htmlFor="password">Senha</Label>
+            <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Entrando...' : 'Entrar'}
+          </Button>
         </form>
       </CardContent>
     </Card>

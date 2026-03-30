@@ -59,8 +59,9 @@ export async function POST(request: NextRequest) {
         html: `
           <h1>Você foi convidado!</h1>
           <p>Você foi convidado para acessar a plataforma de cursos de <strong>${tenant.name}</strong>.</p>
-          <p><a href="${inviteUrl}" style="background-color:#3b82f6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:bold;">Aceitar convite e acessar</a></p>
-          <p style="color:#9ca3af;font-size:12px;">Este convite expira em 7 dias.</p>
+          <p>Clique no botão abaixo para criar sua conta com email e senha:</p>
+          <p><a href="${inviteUrl}" style="background-color:#3b82f6;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:bold;">Criar conta e acessar</a></p>
+          <p style="color:#9ca3af;font-size:12px;">Este convite expira em 7 dias. Você precisará criar uma senha ao aceitar.</p>
         `,
       })
       results.push({ email, success: true })
