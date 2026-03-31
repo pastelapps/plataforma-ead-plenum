@@ -1,6 +1,5 @@
 import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { StudentHeader } from '@/components/layout/StudentHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Award, Download, ExternalLink } from 'lucide-react'
@@ -17,9 +16,7 @@ export default async function CertificadosPage() {
     .order('issued_at', { ascending: false })
 
   return (
-    <>
-      <StudentHeader />
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Meus Certificados</h1>
         {(!certificates || certificates.length === 0) ? (
           <p style={{ color: 'var(--color-text-secondary)' }}>Você ainda não tem certificados. Conclua um curso para receber seu certificado.</p>
@@ -49,7 +46,6 @@ export default async function CertificadosPage() {
             ))}
           </div>
         )}
-      </main>
-    </>
+    </div>
   )
 }

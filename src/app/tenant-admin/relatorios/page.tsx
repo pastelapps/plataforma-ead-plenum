@@ -1,7 +1,7 @@
-import { requireRole } from '@/lib/auth/guards'
+import { requireAdminProfile } from '@/lib/auth/guards'
 
 export default async function TenantRelatoriosPage() {
-  await requireRole('admin_tenant')
+  await requireAdminProfile()
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Relatórios</h1>

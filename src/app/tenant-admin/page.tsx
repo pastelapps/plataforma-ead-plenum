@@ -1,11 +1,11 @@
-import { requireRole } from '@/lib/auth/guards'
-import { createServerComponentClient } from '@/lib/supabase/server'
+import { requireAdminProfile } from '@/lib/auth/guards'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { StatsCard } from '@/components/admin/StatsCard'
 import { Users, BookOpen, Award, TrendingUp } from 'lucide-react'
 
 export default async function TenantAdminDashboard() {
-  const { tenant } = await requireRole('admin_tenant')
-  const supabase = await createServerComponentClient()
+  const { tenant } = await requireAdminProfile()
+  const supabase = createServiceRoleClient()
 
   const [profilesRes, coursesRes, certsRes] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id).eq('role', 'student'),

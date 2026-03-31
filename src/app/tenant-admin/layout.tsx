@@ -1,8 +1,8 @@
 import { TenantAdminSidebar } from '@/components/layout/TenantAdminSidebar'
-import { requireRole } from '@/lib/auth/guards'
+import { requireAdminProfile } from '@/lib/auth/guards'
 
 export default async function TenantAdminLayout({ children }: { children: React.ReactNode }) {
-  await requireRole('admin_tenant')
+  await requireAdminProfile()
   return (
     <div className="flex min-h-screen">
       <TenantAdminSidebar />

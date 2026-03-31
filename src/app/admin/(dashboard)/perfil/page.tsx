@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { User, Mail, Phone, Building2, Briefcase, Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function PerfilPage() {
+export default function AdminPerfilPage() {
   const [profile, setProfile] = useState<any>(null)
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -45,7 +45,7 @@ export default function PerfilPage() {
   if (!profile) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--color-primary-500, #1ed6e4)' }} />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </div>
     )
   }
@@ -57,114 +57,77 @@ export default function PerfilPage() {
       <form onSubmit={handleSave} className="space-y-6">
         {/* Email (read-only) */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-white/70">Email</label>
+          <label className="block text-sm font-medium text-gray-300">Email</label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Mail className="h-4 w-4 text-neutral-500" />
+              <Mail className="h-4 w-4 text-gray-500" />
             </div>
             <input
               type="email"
               value={email}
               readOnly
-              className="h-11 w-full rounded-lg border pl-10 pr-4 text-sm text-neutral-500 outline-none cursor-not-allowed"
-              style={{ backgroundColor: '#111111', borderColor: '#333333' }}
+              className="h-11 w-full rounded-lg border border-gray-700 bg-gray-800/50 pl-10 pr-4 text-sm text-gray-400 outline-none cursor-not-allowed"
             />
           </div>
-          <p className="text-xs text-neutral-500">O email não pode ser alterado.</p>
+          <p className="text-xs text-gray-500">O email não pode ser alterado.</p>
         </div>
 
         {/* Nome */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-white/70">Nome completo</label>
+          <label className="block text-sm font-medium text-gray-300">Nome completo</label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <User className="h-4 w-4 text-neutral-500" />
+              <User className="h-4 w-4 text-gray-500" />
             </div>
             <input
               name="full_name"
               defaultValue={profile.full_name ?? ''}
-              className="h-11 w-full rounded-lg border pl-10 pr-4 text-sm text-white outline-none transition-colors"
-              style={{ backgroundColor: '#111111', borderColor: '#333333' }}
-              onFocus={e => {
-                e.target.style.borderColor = 'var(--color-primary-500, #1ed6e4)'
-                e.target.style.boxShadow = '0 0 0 2px rgba(30, 214, 228, 0.2)'
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = '#333333'
-                e.target.style.boxShadow = 'none'
-              }}
+              className="h-11 w-full rounded-lg border border-gray-700 bg-gray-800 pl-10 pr-4 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
             />
           </div>
         </div>
 
         {/* Telefone */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-white/70">Telefone</label>
+          <label className="block text-sm font-medium text-gray-300">Telefone</label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Phone className="h-4 w-4 text-neutral-500" />
+              <Phone className="h-4 w-4 text-gray-500" />
             </div>
             <input
               name="phone"
               defaultValue={profile.phone ?? ''}
-              className="h-11 w-full rounded-lg border pl-10 pr-4 text-sm text-white outline-none transition-colors"
-              style={{ backgroundColor: '#111111', borderColor: '#333333' }}
-              onFocus={e => {
-                e.target.style.borderColor = 'var(--color-primary-500, #1ed6e4)'
-                e.target.style.boxShadow = '0 0 0 2px rgba(30, 214, 228, 0.2)'
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = '#333333'
-                e.target.style.boxShadow = 'none'
-              }}
+              className="h-11 w-full rounded-lg border border-gray-700 bg-gray-800 pl-10 pr-4 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
             />
           </div>
         </div>
 
         {/* Departamento */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-white/70">Departamento</label>
+          <label className="block text-sm font-medium text-gray-300">Departamento</label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Building2 className="h-4 w-4 text-neutral-500" />
+              <Building2 className="h-4 w-4 text-gray-500" />
             </div>
             <input
               name="department"
               defaultValue={profile.department ?? ''}
-              className="h-11 w-full rounded-lg border pl-10 pr-4 text-sm text-white outline-none transition-colors"
-              style={{ backgroundColor: '#111111', borderColor: '#333333' }}
-              onFocus={e => {
-                e.target.style.borderColor = 'var(--color-primary-500, #1ed6e4)'
-                e.target.style.boxShadow = '0 0 0 2px rgba(30, 214, 228, 0.2)'
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = '#333333'
-                e.target.style.boxShadow = 'none'
-              }}
+              className="h-11 w-full rounded-lg border border-gray-700 bg-gray-800 pl-10 pr-4 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
             />
           </div>
         </div>
 
         {/* Cargo */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-white/70">Cargo</label>
+          <label className="block text-sm font-medium text-gray-300">Cargo</label>
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <Briefcase className="h-4 w-4 text-neutral-500" />
+              <Briefcase className="h-4 w-4 text-gray-500" />
             </div>
             <input
               name="job_title"
               defaultValue={profile.job_title ?? ''}
-              className="h-11 w-full rounded-lg border pl-10 pr-4 text-sm text-white outline-none transition-colors"
-              style={{ backgroundColor: '#111111', borderColor: '#333333' }}
-              onFocus={e => {
-                e.target.style.borderColor = 'var(--color-primary-500, #1ed6e4)'
-                e.target.style.boxShadow = '0 0 0 2px rgba(30, 214, 228, 0.2)'
-              }}
-              onBlur={e => {
-                e.target.style.borderColor = '#333333'
-                e.target.style.boxShadow = 'none'
-              }}
+              className="h-11 w-full rounded-lg border border-gray-700 bg-gray-800 pl-10 pr-4 text-sm text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
             />
           </div>
         </div>
@@ -172,11 +135,7 @@ export default function PerfilPage() {
         <button
           type="submit"
           disabled={loading}
-          className="flex items-center justify-center gap-2 h-11 px-6 rounded-lg text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-          style={{
-            backgroundColor: 'var(--color-btn-primary-bg, #1ed6e4)',
-            color: 'var(--color-btn-primary-text, #0a0a0a)',
-          }}
+          className="flex items-center justify-center gap-2 h-11 px-6 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
           {loading ? (
             <>

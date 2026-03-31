@@ -1,9 +1,9 @@
-import { requireRole } from '@/lib/auth/guards'
-import { createServerComponentClient } from '@/lib/supabase/server'
+import { requireAdminProfile } from '@/lib/auth/guards'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 export default async function TenantComunidadePage() {
-  const { tenant } = await requireRole('admin_tenant')
-  const supabase = await createServerComponentClient()
+  const { tenant } = await requireAdminProfile()
+  const supabase = createServiceRoleClient()
 
   const { data: posts } = await supabase
     .from('forum_posts')

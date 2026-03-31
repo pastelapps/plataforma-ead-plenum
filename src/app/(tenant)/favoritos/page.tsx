@@ -1,6 +1,5 @@
 import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { StudentHeader } from '@/components/layout/StudentHeader'
 import { CourseGrid } from '@/components/course/CourseGrid'
 
 export default async function FavoritosPage() {
@@ -15,16 +14,13 @@ export default async function FavoritosPage() {
   const courses = favorites?.map((f: any) => f.courses).filter(Boolean) ?? []
 
   return (
-    <>
-      <StudentHeader />
-      <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Meus Favoritos</h1>
         {courses.length === 0 ? (
           <p style={{ color: 'var(--color-text-secondary)' }}>Você não tem cursos favoritos ainda. Clique no coração nos cards de cursos para adicionar.</p>
         ) : (
           <CourseGrid title="" courses={courses} favorites={favorites ?? []} />
         )}
-      </main>
-    </>
+    </div>
   )
 }

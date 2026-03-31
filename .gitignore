@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local assets (uploaded to storage separately)
+assets*/
+
+# claude code
+.claude/

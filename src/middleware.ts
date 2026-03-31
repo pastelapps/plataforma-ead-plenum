@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createMiddlewareClient } from '@/lib/supabase/middleware'
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN!
-
 const PUBLIC_PATHS = [
   '/login',
+  '/admin/login',
   '/invite',
   '/verify',
   '/api/webhooks',
@@ -17,42 +16,81 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.headers.get('host') ?? ''
 
+  // Dev mode: support ?tenant=slug to switch tenants via cookie
+  if (hostname.includes('localhost')) {
+    const tenantParam = request.nextUrl.searchParams.get('tenant')
+    if (tenantParam) {
+      const url = new URL(request.url)
+      url.searchParams.delete('tenant')
+      const response = NextResponse.redirect(url)
+      response.cookies.set('dev-tenant-slug', tenantParam, { path: '/', maxAge: 86400 })
+      return response
+    }
+  }
+
+  // Public paths - no auth required
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
+    // In dev mode, forward tenant cookie as header for tenant resolution
+    if (hostname.includes('localhost')) {
+      const devTenant = request.cookies.get('dev-tenant-slug')?.value
+      if (devTenant) {
+        const requestHeaders = new Headers(request.headers)
+        requestHeaders.set('x-tenant-slug', devTenant)
+        return NextResponse.next({ request: { headers: requestHeaders } })
+      }
+    }
     return NextResponse.next()
   }
 
+  // Create supabase client and get session
   const { supabase, response } = createMiddlewareClient(request)
   const { data: { session } } = await supabase.auth.getSession()
 
-  if (hostname.startsWith('admin.')) {
+  // ── ADMIN ROUTES (org admin) ──
+  // /admin/* (except /admin/login which is public)
+  if (pathname.startsWith('/admin')) {
     if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-    const { data: orgAdmin } = await supabase
-      .from('organization_admins')
-      .select('id')
-      .eq('user_id', session.user.id)
-      .eq('active', true)
-      .limit(1)
-      .single()
-
-    if (!orgAdmin) {
-      return NextResponse.redirect(new URL('/unauthorized', request.url))
+      return NextResponse.redirect(new URL('/admin/login', request.url))
     }
     return response
   }
 
+  // ── TENANT ADMIN ROUTES ──
   if (pathname.startsWith('/tenant-admin')) {
     if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url))
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+    // In dev mode, forward tenant cookie as header
+    if (hostname.includes('localhost')) {
+      const devTenant = request.cookies.get('dev-tenant-slug')?.value
+      if (devTenant) {
+        const requestHeaders = new Headers(request.headers)
+        requestHeaders.set('x-tenant-slug', devTenant)
+        const newResponse = NextResponse.next({ request: { headers: requestHeaders } })
+        response.cookies.getAll().forEach(c => newResponse.cookies.set(c.name, c.value))
+        return newResponse
+      }
     }
     return response
   }
 
-  if (!session && !pathname.startsWith('/login') && !pathname.startsWith('/invite')) {
+  // ── STUDENT / TENANT ROUTES ──
+  if (!session) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // In dev mode, forward tenant cookie as header for tenant resolution
+  if (hostname.includes('localhost')) {
+    const devTenant = request.cookies.get('dev-tenant-slug')?.value
+    if (devTenant) {
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-tenant-slug', devTenant)
+      const newResponse = NextResponse.next({ request: { headers: requestHeaders } })
+      response.cookies.getAll().forEach(c => newResponse.cookies.set(c.name, c.value))
+      return newResponse
+    }
   }
 
   return response

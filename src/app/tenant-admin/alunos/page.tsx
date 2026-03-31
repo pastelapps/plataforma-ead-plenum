@@ -1,13 +1,13 @@
-import { requireRole } from '@/lib/auth/guards'
-import { createServerComponentClient } from '@/lib/supabase/server'
+import { requireAdminProfile } from '@/lib/auth/guards'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Plus } from 'lucide-react'
 
 export default async function AlunosPage() {
-  const { tenant } = await requireRole('admin_tenant')
-  const supabase = await createServerComponentClient()
+  const { tenant } = await requireAdminProfile()
+  const supabase = createServiceRoleClient()
 
   const { data: profiles } = await supabase
     .from('profiles')

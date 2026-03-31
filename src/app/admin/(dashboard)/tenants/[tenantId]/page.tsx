@@ -583,21 +583,33 @@ export default function TenantDetailPage() {
                         <div className="flex-1 p-5" style={{ backgroundColor: bgPage }}>
                           <p className="text-lg font-bold mb-1" style={{ color: headerText }}>Ola, Admin!</p>
                           <p className="text-sm opacity-60 mb-5" style={{ color: headerText }}>Continue seus estudos</p>
-                          <div className="grid grid-cols-2 gap-4 mb-5">
-                            {['Gestao Publica', 'Atendimento'].map((name, i) => (
-                              <div key={i} className="rounded-xl overflow-hidden shadow-sm border" style={{ backgroundColor: bgSurface }}>
-                                <div className="h-24 relative" style={{ background: cardGradient || `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
-                                  <div className="absolute inset-0" style={{ backgroundColor: cardOverlay }} />
-                                  <div className="absolute bottom-2 left-3 right-3">
-                                    <div className="h-1.5 rounded-full bg-white/30">
-                                      <div className="h-1.5 rounded-full bg-white" style={{ width: `${50 + i * 25}%` }} />
-                                    </div>
+                          {/* Cards verticais 2:3 - estilo TheMembers */}
+                          <div className="flex gap-3 mb-5 overflow-hidden">
+                            {[
+                              { name: 'GESTAO PUBLICA MODERNA', instructor: 'Prof. Carlos Silva', progress: 50 },
+                              { name: 'ATENDIMENTO AO CIDADAO', instructor: 'Profa. Ana Santos', progress: 75 },
+                              { name: 'LICITACOES E CONTRATOS', instructor: '', progress: 0 },
+                            ].map((course, i) => (
+                              <div key={i} className="relative rounded-2xl overflow-hidden shadow-sm flex-shrink-0" style={{ width: '115px', height: '200px' }}>
+                                <div className="absolute inset-0" style={{ background: cardGradient || `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }} />
+                                <div className="absolute inset-0" style={{ backgroundColor: cardOverlay }} />
+                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)' }} />
+                                {course.progress > 0 && (
+                                  <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                                    <div className="h-full" style={{ width: `${course.progress}%`, backgroundColor: primaryColor }} />
                                   </div>
+                                )}
+                                <div className="absolute bottom-0 left-0 right-0 p-2">
+                                  {course.instructor && (
+                                    <span className="inline-block px-1.5 py-0.5 rounded-full text-white font-semibold mb-1" style={{ fontSize: '6px', backgroundColor: '#00e676', textTransform: 'uppercase' }}>
+                                      {course.instructor}
+                                    </span>
+                                  )}
+                                  <p className="text-white font-bold leading-tight" style={{ fontSize: '8px', textTransform: 'uppercase' }}>{course.name}</p>
                                 </div>
-                                <div className="p-3">
-                                  <p className="font-semibold text-sm" style={{ color: headerText }}>{name}</p>
-                                  <p className="text-xs opacity-50 mt-0.5">{50 + i * 25}% concluido</p>
-                                </div>
+                                {assets?.logo_square_url && (
+                                  <img src={assets.logo_square_url} alt="" className="absolute bottom-2 right-2 opacity-60" style={{ width: '14px', height: '14px', objectFit: 'contain' }} />
+                                )}
                               </div>
                             ))}
                           </div>

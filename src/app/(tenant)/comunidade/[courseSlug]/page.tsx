@@ -1,6 +1,5 @@
 import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { StudentHeader } from '@/components/layout/StudentHeader'
 import Link from 'next/link'
 import { MessageSquare } from 'lucide-react'
 
@@ -25,9 +24,7 @@ export default async function CourseForumPage({ params }: Props) {
     .limit(50)
 
   return (
-    <>
-      <StudentHeader />
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-2">Fórum - {course.title}</h1>
         <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>Tire dúvidas e interaja com outros alunos</p>
         <div className="space-y-3">
@@ -44,7 +41,6 @@ export default async function CourseForumPage({ params }: Props) {
           ))}
           {(!posts || posts.length === 0) && <p style={{ color: 'var(--color-text-secondary)' }}>Nenhuma postagem ainda. Seja o primeiro!</p>}
         </div>
-      </main>
-    </>
+    </div>
   )
 }

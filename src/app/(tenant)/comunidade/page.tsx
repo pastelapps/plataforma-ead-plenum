@@ -1,6 +1,5 @@
 import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { StudentHeader } from '@/components/layout/StudentHeader'
 import Link from 'next/link'
 import { MessageSquare } from 'lucide-react'
 
@@ -17,9 +16,7 @@ export default async function CommunityPage() {
   const courses = enrollments?.map((e: any) => e.tenant_courses?.courses).filter(Boolean) ?? []
 
   return (
-    <>
-      <StudentHeader />
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Comunidade</h1>
         <div className="space-y-3">
           {courses.map((course: any) => (
@@ -30,7 +27,6 @@ export default async function CommunityPage() {
           ))}
           {courses.length === 0 && <p style={{ color: 'var(--color-text-secondary)' }}>Matricule-se em um curso para acessar a comunidade.</p>}
         </div>
-      </main>
-    </>
+    </div>
   )
 }

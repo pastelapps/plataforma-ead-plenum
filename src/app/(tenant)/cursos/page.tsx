@@ -1,6 +1,5 @@
 import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { StudentHeader } from '@/components/layout/StudentHeader'
 import { CourseGrid } from '@/components/course/CourseGrid'
 
 export default async function CatalogPage() {
@@ -19,12 +18,9 @@ export default async function CatalogPage() {
     .eq('profile_id', profile.id)
 
   return (
-    <>
-      <StudentHeader />
-      <main className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Catálogo de Cursos</h1>
         <CourseGrid title="" courses={tenantCourses ?? []} favorites={favorites ?? []} />
-      </main>
-    </>
+    </div>
   )
 }

@@ -1,6 +1,5 @@
 import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { StudentHeader } from '@/components/layout/StudentHeader'
 
 export default async function NotificacoesPage() {
   const { profile } = await requireProfile()
@@ -14,9 +13,7 @@ export default async function NotificacoesPage() {
     .limit(50)
 
   return (
-    <>
-      <StudentHeader />
-      <main className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Notificações</h1>
         <div className="space-y-2">
           {notifications?.map((n: any) => (
@@ -28,7 +25,6 @@ export default async function NotificacoesPage() {
           ))}
           {(!notifications || notifications.length === 0) && <p style={{ color: 'var(--color-text-secondary)' }}>Nenhuma notificação.</p>}
         </div>
-      </main>
-    </>
+    </div>
   )
 }
