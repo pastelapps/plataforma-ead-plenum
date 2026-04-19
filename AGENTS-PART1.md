@@ -14,7 +14,7 @@
 
 Plataforma EAD multi-tenant white-label com 3 camadas hierárquicas:
 
-- **Organization (Master)** — ex: CEAP — cria e gerencia cursos, módulos e aulas
+- **Organization (Master)** — ex: Plenum — cria e gerencia cursos, módulos e aulas
 - **Tenant** — ex: Prefeitura de Guaxupé — contrata cursos do master, tem identidade visual 100% própria
 - **Profile (Aluno)** — acessa pela plataforma do tenant, identidade desvinculada entre tenants
 
@@ -365,7 +365,7 @@ create extension if not exists "uuid-ossp";
 create extension if not exists "pg_trgm";
 
 -- ============================================================
--- ORGANIZATIONS (provedores master: CEAP, etc.)
+-- ORGANIZATIONS (provedores master: Plenum, etc.)
 -- ============================================================
 create table organizations (
   id          uuid primary key default uuid_generate_v4(),

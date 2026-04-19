@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Video, FileText, File } from 'lucide-react'
+import { Plus, Video, FileText, File, Pencil } from 'lucide-react'
 
 interface Props { params: Promise<{ courseId: string; moduleId: string }> }
 
@@ -58,6 +58,11 @@ export default async function AulasPage({ params }: Props) {
                     </div>
                   </div>
                 </div>
+                <Link href={`/admin/cursos/${courseId}/modulos/${moduleId}/aulas/${lesson.id}`}>
+                  <Button variant="ghost" size="sm">
+                    <Pencil className="h-4 w-4 mr-1" /> Editar
+                  </Button>
+                </Link>
               </div>
             )
           })}

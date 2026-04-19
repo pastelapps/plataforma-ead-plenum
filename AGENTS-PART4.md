@@ -536,7 +536,7 @@ export async function POST(request: NextRequest) {
 
 -- 1. Organization
 insert into organizations (id, name, slug, email) values
-  ('11111111-1111-1111-1111-111111111111', 'CEAP - Centro de Ensino', 'ceap', 'admin@ceap.edu.br');
+  ('11111111-1111-1111-1111-111111111111', 'Plenum - Educação Corporativa', 'plenum', 'admin@plenum.com.br');
 
 -- 2. Organization Admin (precisa criar o auth.user primeiro via Dashboard ou script)
 -- O user_id será o ID do auth.user criado manualmente

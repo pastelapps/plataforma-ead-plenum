@@ -48,6 +48,9 @@ export default function NovaAulaPage() {
   const [thumbnailUploading, setThumbnailUploading] = useState(false)
   const [supplementaryMaterials, setSupplementaryMaterials] = useState<SupplementaryMaterial[]>([])
   const [materialUploading, setMaterialUploading] = useState(false)
+  const [pdfUrl, setPdfUrl] = useState('')
+  const [pdfUploading, setPdfUploading] = useState(false)
+  const [pdfFileName, setPdfFileName] = useState('')
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -81,43 +84,37 @@ export default function NovaAulaPage() {
       return null
     }
 
-    // 1. Criar vídeo no Panda
+    // 1. Get Panda credentials + upload server from our API
     setVideoStatus('creating')
-    const res = await fetch('/api/panda/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
-    })
-    const data = await res.json()
+    const res = await fetch('/api/panda/upload')
+    const creds = await res.json()
 
-    if (!data.videoId) {
+    if (!creds.authorization) {
       setVideoStatus('error')
-      setVideoError('Falha ao criar vídeo no Panda Video')
+      setVideoError('Panda Video não configurado')
       return null
     }
 
-    const videoId = data.videoId
-    const libraryId = data.libraryId
-    const authorization = data.authorization
-    setPandaVideoId(videoId)
+    // 2. Generate a UUID for the video so we can track it
+    const videoUuid = crypto.randomUUID()
 
-    // 2. Upload via TUS
+    // 3. Upload via TUS — Panda creates the video with our UUID
     setVideoStatus('uploading')
+
+    const metadata: Record<string, string> = {
+      authorization: creds.authorization,
+      filename: videoFile.name,
+      video_id: videoUuid,
+    }
+    if (creds.folderId) {
+      metadata.folder_id = creds.folderId
+    }
 
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(videoFile, {
-        endpoint: 'https://uploader-us01.pandavideo.com.br/upload',
+        endpoint: creds.uploadEndpoint || 'https://uploader-us01.pandavideo.com.br/files',
         retryDelays: [0, 3000, 5000, 10000, 20000],
-        chunkSize: 5 * 1024 * 1024, // 5MB chunks
-        metadata: {
-          video_id: videoId,
-          library_id: libraryId,
-          filename: videoFile.name,
-          filetype: videoFile.type,
-        },
-        headers: {
-          Authorization: authorization,
-        },
+        metadata,
         onError(error) {
           console.error('Upload error:', error)
           setVideoStatus('error')
@@ -129,13 +126,12 @@ export default function NovaAulaPage() {
           setUploadProgress(percentage)
         },
         onSuccess() {
+          setPandaVideoId(videoUuid)
           setVideoStatus('processing')
           setUploadProgress(100)
           toast.success('Vídeo enviado! O Panda Video está processando.')
-
-          // Poll status
-          pollVideoStatus(videoId, authorization)
-          resolve(videoId)
+          pollVideoStatus(videoUuid)
+          resolve(videoUuid)
         },
       })
 
@@ -143,7 +139,7 @@ export default function NovaAulaPage() {
     })
   }
 
-  const pollVideoStatus = async (videoId: string, _auth: string) => {
+  const pollVideoStatus = async (videoId: string) => {
     const checkStatus = async () => {
       const res = await fetch(`/api/panda/status?videoId=${videoId}`)
       const video = await res.json()
@@ -160,7 +156,6 @@ export default function NovaAulaPage() {
         return
       }
 
-      // Continuar polling
       setTimeout(checkStatus, 5000)
     }
 
@@ -303,6 +298,13 @@ export default function NovaAulaPage() {
       }
     }
 
+    // Validate PDF
+    if (contentType === 'pdf' && !pdfUrl) {
+      toast.error('Envie um arquivo PDF')
+      setLoading(false)
+      return
+    }
+
     // Salvar no banco
     const supabase = createClient()
     const { error } = await supabase.from('lessons').insert({
@@ -312,10 +314,10 @@ export default function NovaAulaPage() {
       description: form.get('description') as string,
       content_type: contentType,
       panda_video_id: contentType === 'video' && !usingPandaUrl ? videoId : null,
-      panda_folder_id: contentType === 'video' && !usingPandaUrl ? process.env.NEXT_PUBLIC_PANDA_FOLDER_ID : null,
       video_status: contentType === 'video' ? (usingPandaUrl ? 'ready' : 'processing') : null,
       panda_video_url: contentType === 'video' ? (usingPandaUrl ? pandaVideoUrl.trim() : null) : null,
       content_body: contentType === 'text' ? form.get('content_body') as string : null,
+      attachment_url: contentType === 'pdf' ? pdfUrl : null,
       is_free_preview: form.get('is_free_preview') === 'on',
       is_required: form.get('is_required') !== 'off',
       position: parseInt(form.get('position') as string) || 0,
@@ -577,11 +579,64 @@ export default function NovaAulaPage() {
 
             {/* UPLOAD PDF */}
             {contentType === 'pdf' && (
-              <div>
-                <Label>Arquivo PDF</Label>
-                <Input type="file" accept="application/pdf" name="pdf_file" />
-                <p className="text-xs text-gray-500 mt-1">Máximo 10MB</p>
-              </div>
+              <Card className="border-2 border-dashed">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Arquivo PDF</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {pdfUrl ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <div>
+                          <p className="text-sm font-medium text-green-800">PDF enviado</p>
+                          <p className="text-xs text-green-600">{pdfFileName}</p>
+                        </div>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => { setPdfUrl(''); setPdfFileName('') }}>
+                        Trocar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex flex-col items-center justify-center p-8 cursor-pointer rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={() => document.getElementById('pdf-input')?.click()}
+                    >
+                      {pdfUploading ? (
+                        <><Loader2 className="h-10 w-10 text-gray-400 mb-3 animate-spin" /><p className="text-sm text-gray-500">Enviando PDF...</p></>
+                      ) : (
+                        <><Upload className="h-10 w-10 text-gray-400 mb-3" /><p className="font-medium text-gray-600">Clique para selecionar o PDF</p><p className="text-sm text-gray-400 mt-1">Máximo 10MB</p></>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    id="pdf-input"
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (file.size > 10 * 1024 * 1024) { toast.error('PDF muito grande. Máximo 10MB.'); return }
+                      setPdfUploading(true)
+                      try {
+                        const slug = Date.now().toString()
+                        const formData = new FormData()
+                        formData.append('file', file)
+                        formData.append('bucket', 'course-assets')
+                        formData.append('path', `lessons/pdf/${slug}.pdf`)
+                        const res = await fetch('/api/upload', { method: 'POST', body: formData })
+                        const data = await res.json()
+                        if (data.error) { toast.error('Erro ao enviar PDF: ' + data.error); return }
+                        setPdfUrl(data.url)
+                        setPdfFileName(file.name)
+                        toast.success('PDF enviado!')
+                      } catch { toast.error('Erro ao enviar PDF.') }
+                      finally { setPdfUploading(false) }
+                    }}
+                  />
+                </CardContent>
+              </Card>
             )}
 
             {/* Opções */}

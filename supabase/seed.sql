@@ -4,7 +4,7 @@
 
 -- 1. Organization
 insert into organizations (id, name, slug, email) values
-  ('11111111-1111-1111-1111-111111111111', 'CEAP - Centro de Ensino', 'ceap', 'admin@ceap.edu.br');
+  ('11111111-1111-1111-1111-111111111111', 'Plenum - Educação Corporativa', 'plenum', 'admin@plenum.com.br');
 
 -- 2. Tenants
 insert into tenants (id, organization_id, name, slug, completion_threshold) values

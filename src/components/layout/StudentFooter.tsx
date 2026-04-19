@@ -8,10 +8,15 @@ export function StudentFooter() {
   const { tenant, assets } = useTenant()
 
   return (
-    <footer className="border-t border-[#222]" style={{ backgroundColor: '#111111' }}>
+    <footer
+      className="border-t"
+      style={{
+        backgroundColor: 'var(--color-bg-secondary)',
+        borderColor: 'var(--color-border)',
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Left column - Logo and copyright */}
           <div className="flex flex-col gap-4">
             {assets?.logoHorizontalUrl ? (
               <Image
@@ -22,54 +27,37 @@ export function StudentFooter() {
                 className="h-8 w-auto object-contain"
               />
             ) : (
-              <span className="text-lg font-bold text-white">{tenant.name}</span>
+              <span className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{tenant.name}</span>
             )}
-            <p className="text-sm" style={{ color: '#9ca3af' }}>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
               &copy; 2026 {tenant.name} &mdash; Todos os direitos reservados
             </p>
           </div>
 
-          {/* Center column - Navigation */}
           <div className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-white mb-1">Navegue</h3>
-            <Link
-              href="/"
-              className="text-sm transition-colors hover:text-white"
-              style={{ color: '#9ca3af' }}
-            >
-              Inicio
-            </Link>
-            <Link
-              href="/cursos"
-              className="text-sm transition-colors hover:text-white"
-              style={{ color: '#9ca3af' }}
-            >
-              Meus Cursos
-            </Link>
-            <Link
-              href="/certificados"
-              className="text-sm transition-colors hover:text-white"
-              style={{ color: '#9ca3af' }}
-            >
-              Certificados
-            </Link>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Navegue</h3>
+            {[
+              { label: 'Inicio', href: '/' },
+              { label: 'Meus Cursos', href: '/cursos' },
+              { label: 'Certificados', href: '/certificados' },
+            ].map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-sm transition-colors"
+                style={{ color: 'var(--color-text-muted)' }}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
-          {/* Right column - Terms and help */}
           <div className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-white mb-1">Termos e ajuda</h3>
-            <Link
-              href="#"
-              className="text-sm transition-colors hover:text-white"
-              style={{ color: '#9ca3af' }}
-            >
+            <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Termos e ajuda</h3>
+            <Link href="#" className="text-sm transition-colors" style={{ color: 'var(--color-text-muted)' }}>
               Termos de uso
             </Link>
-            <Link
-              href="#"
-              className="text-sm transition-colors hover:text-white"
-              style={{ color: '#9ca3af' }}
-            >
+            <Link href="#" className="text-sm transition-colors" style={{ color: 'var(--color-text-muted)' }}>
               Politicas de privacidade
             </Link>
           </div>

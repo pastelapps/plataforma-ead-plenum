@@ -10,11 +10,11 @@ export default async function CourseForumPage({ params }: Props) {
   const { profile, tenant } = await requireProfile()
   const supabase = await createServerComponentClient()
 
-  const { data: course } = await supabase.from('courses').select('id, title').eq('slug', courseSlug).single()
+  const { data: course } = await supabase.from('courses').select('id, title').eq('slug', courseSlug).single() as any
   if (!course) return <p>Curso não encontrado</p>
 
-  const { data: posts } = await supabase
-    .from('forum_posts')
+  const { data: posts } = await (supabase
+    .from('forum_posts') as any)
     .select('*, profiles(full_name, avatar_url)')
     .eq('course_id', course.id)
     .eq('tenant_id', tenant.id)

@@ -249,6 +249,9 @@ export default function TenantDetailPage() {
     setSaving(true)
     const form = new FormData(e.currentTarget)
     const supabase = createClient()
+    const maxStudentsRaw = form.get('max_students') as string
+    const maxStudents = maxStudentsRaw ? parseInt(maxStudentsRaw, 10) : null
+
     const { error } = await supabase.from('tenants').update({
       name: form.get('name') as string,
       slug: form.get('slug') as string,
@@ -257,6 +260,7 @@ export default function TenantDetailPage() {
       completion_threshold: parseFloat(form.get('completion_threshold') as string) || 80,
       contract_start: (form.get('contract_start') as string) || null,
       contract_end: (form.get('contract_end') as string) || null,
+      max_students: maxStudents,
     }).eq('id', id)
     if (error) toast.error(error.message)
     else { toast.success('Dados salvos!'); loadAll() }
@@ -420,7 +424,7 @@ export default function TenantDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4 text-gray-400" />Contrato</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Inicio do contrato</Label>
@@ -430,6 +434,15 @@ export default function TenantDetailPage() {
                       <Label>Fim do contrato</Label>
                       <Input name="contract_end" type="date" defaultValue={tenant.contract_end ?? ''} />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Users className="h-3.5 w-3.5 text-gray-400" />Limite de alunos</Label>
+                    <div className="flex items-center gap-2">
+                      <Input name="max_students" type="number" min={0}
+                        defaultValue={tenant.max_students ?? ''} placeholder="Sem limite" className="max-w-[150px]" />
+                      <span className="text-sm text-gray-500">vagas</span>
+                    </div>
+                    <p className="text-xs text-gray-400">Deixe vazio para vagas ilimitadas. Atualmente: {stats.profiles} alunos.</p>
                   </div>
                 </CardContent>
               </Card>

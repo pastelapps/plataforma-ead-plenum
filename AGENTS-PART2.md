@@ -1251,7 +1251,7 @@ export default async function AcceptInvitePage({ params }: Props) {
 
 ## 9. AGENTE 5 — ADMIN PANEL (ORGANIZATION)
 
-**Responsabilidade:** Criar o painel administrativo da Organization (master). Este é o painel onde CEAP gerencia seus cursos, módulos, aulas, tenants e contratos.
+**Responsabilidade:** Criar o painel administrativo da Organization (master). Este é o painel onde Plenum gerencia seus cursos, módulos, aulas, tenants e contratos.
 
 ### Estrutura de rotas do admin:
 

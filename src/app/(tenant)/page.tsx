@@ -1,169 +1,126 @@
-import { requireProfile } from '@/lib/auth/guards'
 import { createServerComponentClient } from '@/lib/supabase/server'
-import { getDesignAssets } from '@/lib/design-system/tokens'
-import { CourseCard } from '@/components/course/CourseCard'
-import { CourseCarousel } from '@/components/course/CourseCarousel'
+import { getTenantFromHeaders } from '@/lib/tenant/resolver'
+import { redirect } from 'next/navigation'
+import { QuickAccessCards } from '@/components/home/QuickAccessCards'
+import { LiveSessionsCarousel } from '@/components/home/LiveSessionsCarousel'
 
 export default async function StudentHomePage() {
-  const { profile, tenant } = await requireProfile()
-  const supabase = await createServerComponentClient()
-  const assets = await getDesignAssets(tenant.id)
+  // Single getUser + tenant resolution (no duplicate calls)
+  const [supabase, tenant] = await Promise.all([
+    createServerComponentClient(),
+    getTenantFromHeaders(),
+  ])
 
-  // Fetch enrollments with progress and course data (including new fields)
-  const { data: enrollments } = await supabase
-    .from('enrollments')
-    .select(`
-      *,
-      tenant_courses (
-        id,
-        courses (
-          id, title, slug, thumbnail_transparent_url, thumbnail_url,
-          short_description, banner_vertical_url, fallback_color,
-          instructor_name, category
-        )
-      )
-    `)
-    .eq('profile_id', profile.id)
-    .eq('status', 'active')
-    .order('last_accessed_at', { ascending: false })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  // Fetch ALL active tenant courses (for category carousels)
-  const { data: allTenantCourses } = await supabase
-    .from('tenant_courses')
-    .select(`
-      id,
-      courses (
-        id, title, slug, thumbnail_transparent_url, thumbnail_url,
-        short_description, banner_vertical_url, fallback_color,
-        instructor_name, category
-      )
-    `)
-    .eq('tenant_id', tenant.id)
-    .eq('active', true)
+  // Check org admin + get profile in parallel
+  const [{ data: orgAdmin }, { data: profile }] = await Promise.all([
+    supabase
+      .from('organization_admins')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('active', true)
+      .limit(1)
+      .single(),
+    supabase
+      .from('profiles')
+      .select('id, full_name, role')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenant.id)
+      .eq('active', true)
+      .single(),
+  ])
 
-  // Build "Continue Assistindo" list: in-progress enrollments with 0 < progress < 100
-  const continueWatching = (enrollments ?? []).filter(
-    (e: any) => e.progress !== undefined && e.progress > 0 && e.progress < 100
+  if (orgAdmin) redirect('/admin')
+  if (!profile) redirect('/login?error=no-profile')
+  const p = profile as any
+
+  // All data queries in parallel
+  const [
+    { data: liveSessions },
+    { data: liveEnrollments },
+    { count: alumniCount },
+    { count: coursesCount },
+  ] = await Promise.all([
+    (supabase.from('live_sessions') as any)
+      .select('id, title, description, scheduled_start, scheduled_end, status, instructor_name, max_viewers')
+      .in('status', ['scheduled', 'live'])
+      .gte('scheduled_end', new Date().toISOString())
+      .order('scheduled_start', { ascending: true })
+      .limit(15),
+
+    (supabase.from('live_enrollments') as any)
+      .select('live_session_id')
+      .eq('profile_id', p.id),
+
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant.id)
+      .eq('role', 'student')
+      .eq('active', true),
+
+    supabase
+      .from('tenant_courses')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant.id)
+      .eq('active', true),
+  ])
+
+  const enrolledSessionIds = new Set(
+    (liveEnrollments ?? []).map((le: any) => le.live_session_id)
   )
 
-  // Build unique course list from all tenant courses for category grouping
-  const allCourses = (allTenantCourses ?? [])
-    .map((tc: any) => ({
-      ...tc.courses,
-      tenant_course_id: tc.id,
-    }))
-    .filter((c: any) => c && c.id)
+  const tenantLiveSessions = (liveSessions ?? []).map((s: any) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    scheduled_start: s.scheduled_start,
+    scheduled_end: s.scheduled_end,
+    status: s.status,
+    instructor_name: s.instructor_name,
+    max_viewers: s.max_viewers,
+    enrollment_count: 0,
+    is_enrolled: enrolledSessionIds.has(s.id),
+  }))
 
-  // Group courses by category
-  const coursesByCategory: Record<string, typeof allCourses> = {}
-  for (const course of allCourses) {
-    const cat = course.category || 'Geral'
-    if (!coursesByCategory[cat]) coursesByCategory[cat] = []
-    coursesByCategory[cat].push(course)
-  }
-
-  const categoryEntries = Object.entries(coursesByCategory)
-
-  // Hero background
-  const heroHasImage = !!assets?.homepageHeroUrl
-  const heroStyle: React.CSSProperties = heroHasImage
-    ? {
-        backgroundImage: `url(${assets!.homepageHeroUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {
-        background: 'linear-gradient(135deg, var(--color-primary-500, #1ed6e4) 0%, #0a0a0a 100%)',
-      }
+  const nextLive = tenantLiveSessions[0] ?? null
 
   return (
-    <main className="min-h-screen" style={{ backgroundColor: '#0a0a0a' }}>
-      {/* ============================================================ */}
-      {/* Hero Section                                                  */}
-      {/* ============================================================ */}
-      <section
-        className="relative w-full flex items-end"
-        style={{
-          ...heroStyle,
-          minHeight: '80vh',
-        }}
-      >
-        {/* Dark gradient overlay at bottom */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(to top, #0a0a0a 0%, rgba(0,0,0,0.3) 50%, transparent 100%)',
-          }}
-        />
-
-        {/* Hero text content */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 lg:px-12 pb-16">
-          <h1 className="text-[40px] font-bold text-white leading-tight mb-3">
-            Bem-vindo, {profile.full_name}!
-          </h1>
-          <p className="text-lg text-white/70 max-w-xl">
-            Explore nossos cursos e transforme sua carreira
-          </p>
-        </div>
+    <main className="min-h-screen">
+      <section className="pt-8 pb-6 px-4 md:px-8 lg:px-12 max-w-7xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
+          Ola, {p.full_name}!
+        </h1>
+        <p className="text-base" style={{ color: 'var(--color-text-muted)' }}>
+          Continue sua jornada de aprendizado
+        </p>
       </section>
 
-      {/* ============================================================ */}
-      {/* Continue Assistindo Section                                   */}
-      {/* ============================================================ */}
-      {continueWatching.length > 0 && (
-        <div className="mt-10">
-          <CourseCarousel title="Continue Assistindo">
-            {continueWatching.map((enrollment: any) => {
-              const course = enrollment.tenant_courses?.courses
-              if (!course) return null
-              return (
-                <CourseCard
-                  key={course.id}
-                  variant="vertical"
-                  course={course}
-                  progress={enrollment.progress}
-                  bannerVerticalUrl={course.banner_vertical_url}
-                  fallbackColor={course.fallback_color}
-                  instructorName={course.instructor_name}
-                />
-              )
-            })}
-          </CourseCarousel>
-        </div>
-      )}
+      <section className="px-4 md:px-8 lg:px-12 max-w-7xl mx-auto mb-10">
+        <QuickAccessCards
+          nextLiveTitle={nextLive?.title}
+          nextLiveDate={
+            nextLive
+              ? new Date(nextLive.scheduled_start).toLocaleDateString('pt-BR', {
+                  weekday: 'short',
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : null
+          }
+          liveCount={tenantLiveSessions.length}
+          alumniCount={alumniCount ?? 0}
+          coursesCount={coursesCount ?? 0}
+        />
+      </section>
 
-      {/* ============================================================ */}
-      {/* Course Sections by Category                                   */}
-      {/* ============================================================ */}
-      <div className={continueWatching.length > 0 ? 'mt-4' : 'mt-10'}>
-        {categoryEntries.map(([category, courses]) => (
-          <CourseCarousel key={category} title={category}>
-            {courses.map((course: any) => (
-              <CourseCard
-                key={course.id}
-                variant="vertical"
-                course={course}
-                bannerVerticalUrl={course.banner_vertical_url}
-                fallbackColor={course.fallback_color}
-                instructorName={course.instructor_name}
-              />
-            ))}
-          </CourseCarousel>
-        ))}
-      </div>
-
-      {/* Empty state if no courses at all */}
-      {categoryEntries.length === 0 && continueWatching.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-32 px-4">
-          <p className="text-2xl font-semibold text-white/60 mb-2">
-            Nenhum curso disponivel ainda
-          </p>
-          <p className="text-base text-white/40">
-            Em breve novos cursos serao adicionados.
-          </p>
-        </div>
-      )}
+      <section className="max-w-7xl mx-auto">
+        <LiveSessionsCarousel sessions={tenantLiveSessions} profileId={p.id} />
+      </section>
     </main>
   )
 }

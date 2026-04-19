@@ -6,40 +6,40 @@ const PUBLIC_PATHS = [
   '/admin/login',
   '/invite',
   '/verify',
-  '/api/webhooks',
-  '/api/auth',
+  '/api/',
   '/_next',
   '/favicon.ico',
 ]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const hostname = request.headers.get('host') ?? ''
 
-  // Dev mode: support ?tenant=slug to switch tenants via cookie
-  if (hostname.includes('localhost')) {
-    const tenantParam = request.nextUrl.searchParams.get('tenant')
-    if (tenantParam) {
-      const url = new URL(request.url)
-      url.searchParams.delete('tenant')
-      const response = NextResponse.redirect(url)
-      response.cookies.set('dev-tenant-slug', tenantParam, { path: '/', maxAge: 86400 })
-      return response
+  // Support ?tenant=slug to switch tenants via cookie (works in all environments)
+  const tenantParam = request.nextUrl.searchParams.get('tenant')
+  if (tenantParam) {
+    const url = new URL(request.url)
+    url.searchParams.delete('tenant')
+    const response = NextResponse.redirect(url)
+    response.cookies.set('dev-tenant-slug', tenantParam, { path: '/', maxAge: 86400 })
+    return response
+  }
+
+  // Helper: forward tenant cookie as x-tenant-slug header
+  function forwardTenantHeader(res: NextResponse): NextResponse {
+    const devTenant = request.cookies.get('dev-tenant-slug')?.value
+    if (devTenant) {
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-tenant-slug', devTenant)
+      const newResponse = NextResponse.next({ request: { headers: requestHeaders } })
+      res.cookies.getAll().forEach(c => newResponse.cookies.set(c.name, c.value))
+      return newResponse
     }
+    return res
   }
 
   // Public paths - no auth required
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
-    // In dev mode, forward tenant cookie as header for tenant resolution
-    if (hostname.includes('localhost')) {
-      const devTenant = request.cookies.get('dev-tenant-slug')?.value
-      if (devTenant) {
-        const requestHeaders = new Headers(request.headers)
-        requestHeaders.set('x-tenant-slug', devTenant)
-        return NextResponse.next({ request: { headers: requestHeaders } })
-      }
-    }
-    return NextResponse.next()
+    return forwardTenantHeader(NextResponse.next())
   }
 
   // Create supabase client and get session
@@ -47,7 +47,6 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
 
   // ── ADMIN ROUTES (org admin) ──
-  // /admin/* (except /admin/login which is public)
   if (pathname.startsWith('/admin')) {
     if (!session) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
@@ -60,18 +59,7 @@ export async function middleware(request: NextRequest) {
     if (!session) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
-    // In dev mode, forward tenant cookie as header
-    if (hostname.includes('localhost')) {
-      const devTenant = request.cookies.get('dev-tenant-slug')?.value
-      if (devTenant) {
-        const requestHeaders = new Headers(request.headers)
-        requestHeaders.set('x-tenant-slug', devTenant)
-        const newResponse = NextResponse.next({ request: { headers: requestHeaders } })
-        response.cookies.getAll().forEach(c => newResponse.cookies.set(c.name, c.value))
-        return newResponse
-      }
-    }
-    return response
+    return forwardTenantHeader(response)
   }
 
   // ── STUDENT / TENANT ROUTES ──
@@ -81,19 +69,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // In dev mode, forward tenant cookie as header for tenant resolution
-  if (hostname.includes('localhost')) {
-    const devTenant = request.cookies.get('dev-tenant-slug')?.value
-    if (devTenant) {
-      const requestHeaders = new Headers(request.headers)
-      requestHeaders.set('x-tenant-slug', devTenant)
-      const newResponse = NextResponse.next({ request: { headers: requestHeaders } })
-      response.cookies.getAll().forEach(c => newResponse.cookies.set(c.name, c.value))
-      return newResponse
-    }
-  }
-
-  return response
+  return forwardTenantHeader(response)
 }
 
 export const config = {

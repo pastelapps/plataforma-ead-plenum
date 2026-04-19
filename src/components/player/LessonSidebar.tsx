@@ -13,6 +13,7 @@ interface LessonItem {
   video_duration_sec: number | null
   estimated_duration_minutes: number | null
   isCompleted: boolean
+  watchPercentage?: number
 }
 
 interface SupplementaryMaterial {
@@ -133,6 +134,18 @@ export function LessonSidebar({
                         </span>
                       )}
                     </div>
+                    {!lesson.isCompleted &&
+                      lesson.watchPercentage != null &&
+                      lesson.watchPercentage > 0 && (
+                        <div className="mt-1 h-0.5 w-full rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-[var(--color-primary-500,#1ed6e4)] transition-all duration-300"
+                            style={{
+                              width: `${Math.min(lesson.watchPercentage, 100)}%`,
+                            }}
+                          />
+                        </div>
+                      )}
                   </div>
                 </Link>
               )

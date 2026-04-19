@@ -1,12 +1,12 @@
 import { requireProfile } from '@/lib/auth/guards'
-import { createServerComponentClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { PandaVideoPlayer } from '@/components/player/PandaVideoPlayer'
 import { LessonControls } from '@/components/player/LessonControls'
 import { LessonTabs } from '@/components/player/LessonTabs'
 import { LessonSidebar } from '@/components/player/LessonSidebar'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, VideoOff } from 'lucide-react'
 
 interface Props {
   params: Promise<{ courseSlug: string; lessonSlug: string }>
@@ -15,7 +15,8 @@ interface Props {
 export default async function LessonPage({ params }: Props) {
   const { courseSlug, lessonSlug } = await params
   const { profile, tenant } = await requireProfile()
-  const supabase = await createServerComponentClient()
+  // Use service role to bypass RLS — auth is already verified by requireProfile()
+  const supabase = createServiceRoleClient()
 
   // Fetch course with modules and lessons (including new fields)
   const { data: course } = await supabase
@@ -67,12 +68,12 @@ export default async function LessonPage({ params }: Props) {
     (l: any) => l.moduleId === lesson.moduleId
   )
 
-  // Fetch enrollment and lesson progress
+  // Fetch enrollment and lesson progress (enrollments use tenant_course_id, not course_id)
   const { data: enrollment } = await supabase
     .from('enrollments')
-    .select('id, lesson_progress(id, lesson_id, completed)')
+    .select('id, tenant_course_id, lesson_progress(id, lesson_id, completed, watched_seconds, percentage), tenant_courses!inner(course_id)')
     .eq('profile_id', profile.id)
-    .eq('course_id', course.id)
+    .eq('tenant_courses.course_id', course.id)
     .single()
 
   const completedSet = new Set(
@@ -81,9 +82,11 @@ export default async function LessonPage({ params }: Props) {
       .map((lp: any) => lp.lesson_id) ?? []
   )
 
-  const currentProgress = enrollment?.lesson_progress?.find(
-    (lp: any) => lp.lesson_id === lesson.id
+  const progressMap = new Map(
+    enrollment?.lesson_progress?.map((lp: any) => [lp.lesson_id, lp]) ?? []
   )
+
+  const currentProgress = progressMap.get(lesson.id)
 
   // Fetch reaction counts for current lesson
   const [{ count: likesCount }, { count: dislikesCount }] = await Promise.all([
@@ -132,15 +135,19 @@ export default async function LessonPage({ params }: Props) {
       : []
 
   // Build sidebar lesson list
-  const sidebarLessons = currentModuleLessons.map((l: any) => ({
-    id: l.id,
-    title: l.title,
-    slug: l.slug,
-    thumbnail_url: l.thumbnail_url,
-    video_duration_sec: l.video_duration_sec,
-    estimated_duration_minutes: l.estimated_duration_minutes,
-    isCompleted: completedSet.has(l.id),
-  }))
+  const sidebarLessons = currentModuleLessons.map((l: any) => {
+    const lp = progressMap.get(l.id)
+    return {
+      id: l.id,
+      title: l.title,
+      slug: l.slug,
+      thumbnail_url: l.thumbnail_url,
+      video_duration_sec: l.video_duration_sec,
+      estimated_duration_minutes: l.estimated_duration_minutes,
+      isCompleted: completedSet.has(l.id),
+      watchPercentage: lp?.percentage ?? 0,
+    }
+  })
 
   // Breadcrumb link
   const backHref = lesson.moduleSlug
@@ -173,12 +180,20 @@ export default async function LessonPage({ params }: Props) {
                 allowFullScreen
               />
             </div>
-          ) : lesson.content_type === 'video' && lesson.panda_video_id && enrollment ? (
+          ) : lesson.content_type === 'video' && lesson.panda_video_id ? (
             <PandaVideoPlayer
               pandaVideoId={lesson.panda_video_id}
-              enrollmentId={enrollment.id}
+              enrollmentId={enrollment?.id ?? ''}
               lessonId={lesson.id}
+              courseSlug={courseSlug}
+              nextLessonSlug={nextLesson?.slug ?? null}
+              startPosition={currentProgress?.watched_seconds ?? 0}
             />
+          ) : lesson.content_type === 'video' ? (
+            <div className="relative w-full aspect-video bg-black flex flex-col items-center justify-center gap-3">
+              <VideoOff className="h-12 w-12 text-white/30" />
+              <p className="text-sm text-white/50">Vídeo ainda não disponível.</p>
+            </div>
           ) : lesson.content_type === 'text' && lesson.content_body ? (
             <div className="px-4 sm:px-6 py-6">
               <div
@@ -187,16 +202,35 @@ export default async function LessonPage({ params }: Props) {
               />
             </div>
           ) : lesson.content_type === 'pdf' && lesson.attachment_url ? (
-            <div className="px-4 sm:px-6 py-6">
-              <div className="p-6 rounded-lg bg-[#111] border border-[#222]">
+            <div className="w-full">
+              <div className="relative w-full aspect-video bg-[#111]">
+                <iframe
+                  src={lesson.attachment_url}
+                  className="w-full h-full"
+                  style={{ border: 'none', minHeight: '70vh' }}
+                />
+              </div>
+              <div className="px-4 sm:px-6 py-3">
                 <a
                   href={lesson.attachment_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[var(--color-primary-500,#1ed6e4)] underline hover:opacity-80"
+                  className="text-sm text-[var(--color-primary-500,#1ed6e4)] hover:opacity-80"
                 >
-                  Baixar material (PDF)
+                  Abrir PDF em nova aba ↗
                 </a>
+              </div>
+            </div>
+          ) : lesson.content_type === 'pdf' ? (
+            <div className="px-4 sm:px-6 py-6">
+              <div className="p-6 rounded-lg bg-[#111] border border-[#222] text-center">
+                <p className="text-white/60">PDF não disponível.</p>
+              </div>
+            </div>
+          ) : lesson.content_type === 'text' ? (
+            <div className="px-4 sm:px-6 py-6">
+              <div className="p-6 rounded-lg bg-[#111] border border-[#222] text-center">
+                <p className="text-white/60">Conteúdo em breve.</p>
               </div>
             </div>
           ) : null}

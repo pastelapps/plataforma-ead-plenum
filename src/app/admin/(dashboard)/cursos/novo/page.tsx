@@ -38,6 +38,7 @@ export default function NewCoursePage() {
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('')
   const [level, setLevel] = useState('beginner')
+  const [modality, setModality] = useState('on_demand')
   const [instructorName, setInstructorName] = useState('')
   const [fallbackColor, setFallbackColor] = useState('#1e40af')
   const [sequentialJourney, setSequentialJourney] = useState(false)
@@ -155,6 +156,7 @@ export default function NewCoursePage() {
         short_description: shortDescription,
         category: category || null,
         level: level || 'beginner',
+        modality,
         instructor_name: instructorName || null,
         banner_vertical_url: bannerVerticalUrl,
         banner_horizontal_url: bannerHorizontalUrl,
@@ -279,6 +281,19 @@ export default function NewCoursePage() {
                       <option value="beginner">Iniciante</option>
                       <option value="intermediate">Intermediario</option>
                       <option value="advanced">Avancado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="modality">Modalidade</Label>
+                    <select
+                      id="modality"
+                      name="modality"
+                      value={modality}
+                      onChange={(e) => setModality(e.target.value)}
+                      className="w-full border rounded-md p-2 h-9 text-sm bg-white"
+                    >
+                      <option value="on_demand">Gravado (sob demanda)</option>
+                      <option value="live">Ao Vivo (Mux)</option>
                     </select>
                   </div>
                 </div>

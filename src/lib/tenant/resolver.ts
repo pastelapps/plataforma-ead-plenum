@@ -20,25 +20,32 @@ export async function getTenantFromHeaders(): Promise<TenantInfo> {
   const headersList = await headers()
   const hostname = headersList.get('host') ?? ''
 
+  // Always check x-tenant-slug header first (set by middleware from cookie)
+  const slugHeader = headersList.get('x-tenant-slug')
+  if (slugHeader) return resolveTenantBySlug(slugHeader)
+
+  // Localhost fallback: pick the first active tenant
   if (hostname.includes('localhost')) {
-    const devSlug = headersList.get('x-tenant-slug')
-    if (devSlug) return resolveTenantBySlug(devSlug)
     const supabase = await createServerComponentClient()
     const { data } = await supabase.from('tenants').select('*').eq('active', true).limit(1).single()
     if (data) return mapTenant(data)
     throw new Error('No active tenant found for development')
   }
 
-  if (hostname === ROOT_DOMAIN || hostname === `www.${ROOT_DOMAIN}`) {
-    redirect('/landing')
+  // Production: subdomain-based resolution
+  if (ROOT_DOMAIN) {
+    if (hostname === ROOT_DOMAIN || hostname === `www.${ROOT_DOMAIN}`) {
+      redirect('/landing')
+    }
+
+    if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
+      const slug = hostname.replace(`.${ROOT_DOMAIN}`, '')
+      if (['admin', 'api', 'www'].includes(slug)) redirect(`https://${ROOT_DOMAIN}/${slug}`)
+      return resolveTenantBySlug(slug)
+    }
   }
 
-  if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
-    const slug = hostname.replace(`.${ROOT_DOMAIN}`, '')
-    if (['admin', 'api', 'www'].includes(slug)) redirect(`https://${ROOT_DOMAIN}/${slug}`)
-    return resolveTenantBySlug(slug)
-  }
-
+  // Custom domain resolution
   return resolveTenantByDomain(hostname)
 }
 

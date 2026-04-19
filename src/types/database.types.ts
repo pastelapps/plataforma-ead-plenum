@@ -12,7 +12,7 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  public: {
+  ead: {
     Tables: {
       announcements: {
         Row: {
@@ -205,17 +205,23 @@ export type Database = {
       courses: {
         Row: {
           active: boolean | null
+          banner_horizontal_url: string | null
+          banner_square_url: string | null
+          banner_vertical_url: string | null
           category: string | null
           created_at: string | null
           description: string | null
           duration_minutes: number | null
+          fallback_color: string | null
           id: string
           instructor_bio: string | null
           instructor_name: string | null
           instructor_photo_url: string | null
           level: string | null
+          modality: string
           organization_id: string
           published_at: string | null
+          sequential_journey: boolean | null
           short_description: string | null
           slug: string
           status: string
@@ -227,17 +233,23 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          banner_horizontal_url?: string | null
+          banner_square_url?: string | null
+          banner_vertical_url?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number | null
+          fallback_color?: string | null
           id?: string
           instructor_bio?: string | null
           instructor_name?: string | null
           instructor_photo_url?: string | null
           level?: string | null
+          modality?: string
           organization_id: string
           published_at?: string | null
+          sequential_journey?: boolean | null
           short_description?: string | null
           slug: string
           status?: string
@@ -249,17 +261,23 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          banner_horizontal_url?: string | null
+          banner_square_url?: string | null
+          banner_vertical_url?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
           duration_minutes?: number | null
+          fallback_color?: string | null
           id?: string
           instructor_bio?: string | null
           instructor_name?: string | null
           instructor_photo_url?: string | null
           level?: string | null
+          modality?: string
           organization_id?: string
           published_at?: string | null
+          sequential_journey?: boolean | null
           short_description?: string | null
           slug?: string
           status?: string
@@ -884,7 +902,9 @@ export type Database = {
           course_id: string
           created_at: string | null
           id: string
+          lesson_id: string | null
           pinned: boolean | null
+          post_type: string | null
           profile_id: string
           tenant_id: string
           title: string | null
@@ -896,7 +916,9 @@ export type Database = {
           course_id: string
           created_at?: string | null
           id?: string
+          lesson_id?: string | null
           pinned?: boolean | null
+          post_type?: string | null
           profile_id: string
           tenant_id: string
           title?: string | null
@@ -908,7 +930,9 @@ export type Database = {
           course_id?: string
           created_at?: string | null
           id?: string
+          lesson_id?: string | null
           pinned?: boolean | null
+          post_type?: string | null
           profile_id?: string
           tenant_id?: string
           title?: string | null
@@ -920,6 +944,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
           {
@@ -1084,6 +1115,45 @@ export type Database = {
           },
         ]
       }
+      lesson_reactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          lesson_id: string
+          profile_id: string
+          reaction_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lesson_id: string
+          profile_id: string
+          reaction_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lesson_id?: string
+          profile_id?: string
+          reaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_reactions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           active: boolean | null
@@ -1092,14 +1162,17 @@ export type Database = {
           content_type: string
           created_at: string | null
           description: string | null
+          estimated_duration_minutes: number | null
           id: string
           is_free_preview: boolean | null
           is_required: boolean | null
           module_id: string
           panda_folder_id: string | null
           panda_video_id: string | null
+          panda_video_url: string | null
           position: number
           slug: string
+          supplementary_materials: Json | null
           thumbnail_url: string | null
           title: string
           updated_at: string | null
@@ -1113,14 +1186,17 @@ export type Database = {
           content_type?: string
           created_at?: string | null
           description?: string | null
+          estimated_duration_minutes?: number | null
           id?: string
           is_free_preview?: boolean | null
           is_required?: boolean | null
           module_id: string
           panda_folder_id?: string | null
           panda_video_id?: string | null
+          panda_video_url?: string | null
           position?: number
           slug: string
+          supplementary_materials?: Json | null
           thumbnail_url?: string | null
           title: string
           updated_at?: string | null
@@ -1134,14 +1210,17 @@ export type Database = {
           content_type?: string
           created_at?: string | null
           description?: string | null
+          estimated_duration_minutes?: number | null
           id?: string
           is_free_preview?: boolean | null
           is_required?: boolean | null
           module_id?: string
           panda_folder_id?: string | null
           panda_video_id?: string | null
+          panda_video_url?: string | null
           position?: number
           slug?: string
+          supplementary_materials?: Json | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string | null
@@ -1425,6 +1504,202 @@ export type Database = {
           },
         ]
       }
+      live_sessions: {
+        Row: {
+          id: string
+          course_id: string
+          title: string
+          description: string | null
+          scheduled_start: string
+          scheduled_end: string
+          actual_start: string | null
+          actual_end: string | null
+          status: string
+          mux_live_stream_id: string | null
+          mux_stream_key: string | null
+          mux_playback_id: string | null
+          mux_asset_id: string | null
+          mux_recording_playback_id: string | null
+          recording_available: boolean | null
+          recording_duration_sec: number | null
+          max_viewers: number | null
+          created_at: string | null
+          recording_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          title: string
+          description?: string | null
+          scheduled_start: string
+          scheduled_end: string
+          actual_start?: string | null
+          actual_end?: string | null
+          status?: string
+          mux_live_stream_id?: string | null
+          mux_stream_key?: string | null
+          mux_playback_id?: string | null
+          mux_asset_id?: string | null
+          mux_recording_playback_id?: string | null
+          recording_available?: boolean | null
+          recording_duration_sec?: number | null
+          recording_expires_at?: string | null
+          max_viewers?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          title?: string
+          description?: string | null
+          scheduled_start?: string
+          scheduled_end?: string
+          actual_start?: string | null
+          actual_end?: string | null
+          status?: string
+          mux_live_stream_id?: string | null
+          mux_stream_key?: string | null
+          mux_playback_id?: string | null
+          mux_asset_id?: string | null
+          mux_recording_playback_id?: string | null
+          recording_available?: boolean | null
+          recording_duration_sec?: number | null
+          recording_expires_at?: string | null
+          max_viewers?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_enrollments: {
+        Row: {
+          id: string
+          live_session_id: string
+          profile_id: string
+          enrolled_at: string | null
+        }
+        Insert: {
+          id?: string
+          live_session_id: string
+          profile_id: string
+          enrolled_at?: string | null
+        }
+        Update: {
+          id?: string
+          live_session_id?: string
+          profile_id?: string
+          enrolled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_enrollments_live_session_id_fkey"
+            columns: ["live_session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_enrollments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracks: {
+        Row: {
+          id: string
+          organization_id: string
+          title: string
+          slug: string
+          description: string | null
+          icon_url: string | null
+          position: number | null
+          active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          title: string
+          slug: string
+          description?: string | null
+          icon_url?: string | null
+          position?: number | null
+          active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          title?: string
+          slug?: string
+          description?: string | null
+          icon_url?: string | null
+          position?: number | null
+          active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      track_courses: {
+        Row: {
+          id: string
+          track_id: string
+          course_id: string
+          position: number | null
+        }
+        Insert: {
+          id?: string
+          track_id: string
+          course_id: string
+          position?: number | null
+        }
+        Update: {
+          id?: string
+          track_id?: string
+          course_id?: string
+          position?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_courses_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_courses: {
         Row: {
           active: boolean | null
@@ -1480,6 +1755,7 @@ export type Database = {
           created_at: string | null
           custom_domain: string | null
           id: string
+          max_students: number | null
           name: string
           organization_id: string
           slug: string
@@ -1494,6 +1770,7 @@ export type Database = {
           created_at?: string | null
           custom_domain?: string | null
           id?: string
+          max_students?: number | null
           name: string
           organization_id: string
           slug: string
@@ -1508,6 +1785,7 @@ export type Database = {
           created_at?: string | null
           custom_domain?: string | null
           id?: string
+          max_students?: number | null
           name?: string
           organization_id?: string
           slug?: string
@@ -1552,7 +1830,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      student_rankings: {
+        Row: {
+          profile_id: string
+          tenant_id: string
+          full_name: string | null
+          avatar_url: string | null
+          department: string | null
+          courses_completed: number
+          courses_in_progress: number
+          total_enrollments: number
+        }
+      }
     }
     Functions: {
       has_tenant_role: {
@@ -1575,7 +1864,7 @@ export type Database = {
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "ead">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
@@ -1691,7 +1980,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  public: {
+  ead: {
     Enums: {},
   },
 } as const

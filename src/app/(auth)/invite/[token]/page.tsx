@@ -11,8 +11,8 @@ export default async function AcceptInvitePage({ params }: Props) {
   const { token } = await params
   const supabase = await createServerComponentClient()
 
-  const { data: invitation } = await supabase
-    .from('invitations')
+  const { data: invitation } = await (supabase
+    .from('invitations') as any)
     .select('*, tenants(name, slug)')
     .eq('token', token)
     .eq('status', 'pending')

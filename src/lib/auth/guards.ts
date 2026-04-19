@@ -33,7 +33,7 @@ export async function requireProfile() {
     .single()
 
   if (!profile) redirect('/login?error=no-profile')
-  return { user, profile, tenant }
+  return { user, profile: profile as any, tenant }
 }
 
 // Admin profile guard - requires admin_tenant/manager profile, resolves tenant from profile
@@ -52,18 +52,19 @@ export async function requireAdminProfile() {
 
   if (!profile) redirect('/admin/login?error=no-admin-profile')
 
+  const p = profile as any
   const tenant = {
-    id: profile.tenants.id,
-    organizationId: profile.tenants.organization_id,
-    name: profile.tenants.name,
-    slug: profile.tenants.slug,
-    customDomain: profile.tenants.custom_domain,
-    active: profile.tenants.active,
-    completionThreshold: profile.tenants.completion_threshold ?? 80,
-    allowSelfRegistration: profile.tenants.allow_self_registration ?? false,
+    id: p.tenants.id,
+    organizationId: p.tenants.organization_id,
+    name: p.tenants.name,
+    slug: p.tenants.slug,
+    customDomain: p.tenants.custom_domain,
+    active: p.tenants.active,
+    completionThreshold: p.tenants.completion_threshold ?? 80,
+    allowSelfRegistration: p.tenants.allow_self_registration ?? false,
   }
 
-  return { user, profile, tenant }
+  return { user, profile: p, tenant }
 }
 
 // Student role guard
@@ -74,10 +75,10 @@ export async function requireRole(requiredRole: 'student' | 'manager' | 'admin_t
   return { user, profile, tenant }
 }
 
-// Org admin guard
+// Org admin guard - uses service role to bypass RLS on org tables
 export async function requireOrgAdmin() {
   const user = await requireAdminAuth()
-  const supabase = await createServerComponentClient()
+  const supabase = createServiceRoleClient()
   const { data: orgAdmin } = await supabase
     .from('organization_admins')
     .select('*, organizations(*)')
@@ -86,5 +87,6 @@ export async function requireOrgAdmin() {
     .limit(1)
     .single()
   if (!orgAdmin) redirect('/unauthorized')
-  return { user, orgAdmin, organization: orgAdmin.organizations }
+  const oa = orgAdmin as any
+  return { user, orgAdmin: oa, organization: oa.organizations }
 }

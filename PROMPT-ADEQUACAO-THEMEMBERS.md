@@ -1,6 +1,6 @@
 # PROMPT — Adequação Visual e Funcional da Plataforma EAD Multi-Tenant
 
-**Repositório:** https://github.com/ceapdesenvolvimentos-web/plataforma-ead-multitenant  
+**Repositório:** https://github.com/plenum/plataforma-ead-multitenant  
 **Stack:** Next.js + Supabase + Tailwind CSS + Vercel  
 **Referência visual:** TheMembers (licitoguruedu.themembers.com.br)  
 **Player de vídeo:** Panda Video (único provider suportado)  
