@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/admin'
-import { resend } from '@/lib/resend/client'
+import { getResend } from '@/lib/resend/client'
 import { z } from 'zod'
 
 const SendInvitationSchema = z.object({
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const inviteUrl = `https://${tenant.slug}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}/invite/${invitation.token}`
 
     try {
-      await resend.emails.send({
+      await getResend().emails.send({
         from: process.env.RESEND_FROM_EMAIL!,
         to: email,
         subject: `Você foi convidado para ${tenant.name}`,

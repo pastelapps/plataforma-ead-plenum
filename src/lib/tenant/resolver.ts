@@ -34,8 +34,12 @@ export async function getTenantFromHeaders(): Promise<TenantInfo> {
 
   // Production: subdomain-based resolution
   if (ROOT_DOMAIN) {
-    if (hostname === ROOT_DOMAIN || hostname === `www.${ROOT_DOMAIN}`) {
-      redirect('/landing')
+    // Root domain or Vercel preview URLs → load first active tenant
+    if (hostname === ROOT_DOMAIN || hostname === `www.${ROOT_DOMAIN}` || hostname.endsWith('.vercel.app')) {
+      const supabase = await createServerComponentClient()
+      const { data } = await supabase.from('tenants').select('*').eq('active', true).limit(1).single()
+      if (data) return mapTenant(data)
+      throw new Error('No active tenant found')
     }
 
     if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
