@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Radio, Calendar, Clock, Copy, Video } from 'lucide-react'
+import { Plus, Radio, Calendar, Clock, Copy, Monitor, Video } from 'lucide-react'
 
 export default async function AdminLiveDashboardPage() {
   const { organization } = await requireOrgAdmin()
@@ -129,9 +129,17 @@ export default async function AdminLiveDashboardPage() {
                         Inicio: {formatTime(s.actual_start || s.scheduled_start)}
                       </p>
                     </div>
-                    <Link href={`/admin/ao-vivo/${s.id}`}>
-                      <Button variant="outline" size="sm">Gerenciar</Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/ao-vivo/${s.id}/estudio`}>
+                        <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                          <Monitor className="h-3.5 w-3.5 mr-1" />
+                          Estudio
+                        </Button>
+                      </Link>
+                      <Link href={`/admin/ao-vivo/${s.id}`}>
+                        <Button variant="outline" size="sm">Gerenciar</Button>
+                      </Link>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

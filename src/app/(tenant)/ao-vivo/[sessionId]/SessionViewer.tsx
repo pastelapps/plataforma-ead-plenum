@@ -2,24 +2,31 @@
 
 import { useState, useEffect } from 'react'
 import { MuxLivePlayer } from '@/components/player/MuxLivePlayer'
+import { LiveChat } from '@/components/live/LiveChat'
 import { Clock, Radio, Video } from 'lucide-react'
 
 interface SessionViewerProps {
+  sessionId: string
   status: string
   playbackId: string | null
   recordingPlaybackId: string | null
   recordingAvailable: boolean
   scheduledStart: string
   title: string
+  profileId: string
+  profileName: string
 }
 
 export function SessionViewer({
+  sessionId,
   status,
   playbackId,
   recordingPlaybackId,
   recordingAvailable,
   scheduledStart,
   title,
+  profileId,
+  profileName,
 }: SessionViewerProps) {
   const [countdown, setCountdown] = useState('')
 
@@ -50,19 +57,43 @@ export function SessionViewer({
     return () => clearInterval(interval)
   }, [status, scheduledStart])
 
-  // Live - show live player
-  if (status === 'live' && playbackId) {
+  // Live - show player (or waiting-for-stream message) + chat side by side
+  if (status === 'live') {
     return (
-      <div className="rounded-xl overflow-hidden">
-        <MuxLivePlayer playbackId={playbackId} streamType="live" title={title} />
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Player - 70% on desktop */}
+        <div className="lg:w-[70%] rounded-xl overflow-hidden">
+          {playbackId ? (
+            <MuxLivePlayer playbackId={playbackId} streamType="live" title={title} />
+          ) : (
+            <div className="rounded-xl bg-white/5 border border-white/10 aspect-video flex flex-col items-center justify-center p-8 text-center">
+              <Radio className="h-10 w-10 mb-3 text-red-500 animate-pulse" />
+              <p className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+                Transmissao ainda nao configurada
+              </p>
+              <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                Aguarde o instrutor iniciar o video. O chat ja esta aberto!
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Chat - 30% on desktop, full width on mobile */}
+        <div className="lg:w-[30%] h-[400px] lg:h-auto lg:min-h-[500px]">
+          <LiveChat
+            sessionId={sessionId}
+            profileId={profileId}
+            profileName={profileName}
+          />
+        </div>
       </div>
     )
   }
 
-  // Ended with recording available
+  // Ended with recording available - player only, no chat
   if (status === 'ended' && recordingAvailable && recordingPlaybackId) {
     return (
-      <div>
+      <div className="max-w-5xl">
         <div className="flex items-center gap-2 mb-4 text-gray-400">
           <Video className="h-4 w-4" /> Gravação da sessão
         </div>

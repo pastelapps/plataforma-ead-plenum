@@ -11,7 +11,7 @@ interface Props { params: Promise<{ sessionId: string }> }
 
 export default async function SessionPage({ params }: Props) {
   const { sessionId } = await params
-  await requireProfile()
+  const { profile } = await requireProfile()
   const supabase = createServiceRoleClient()
 
   const { data: session } = await (supabase
@@ -24,7 +24,7 @@ export default async function SessionPage({ params }: Props) {
   const s = session as any
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>{s.title}</h1>
@@ -54,12 +54,15 @@ export default async function SessionPage({ params }: Props) {
       </div>
 
       <SessionViewer
+        sessionId={s.id}
         status={s.status}
         playbackId={s.mux_playback_id}
         recordingPlaybackId={s.mux_recording_playback_id}
         recordingAvailable={s.recording_available ?? false}
         scheduledStart={s.scheduled_start}
         title={s.title}
+        profileId={profile.id}
+        profileName={profile.full_name ?? 'Aluno'}
       />
     </div>
   )

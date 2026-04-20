@@ -1617,6 +1617,51 @@ export type Database = {
           },
         ]
       }
+      live_chat_messages: {
+        Row: {
+          id: string
+          live_session_id: string
+          profile_id: string | null
+          message: string
+          sender_name: string | null
+          is_instructor: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          live_session_id: string
+          profile_id?: string | null
+          message: string
+          sender_name?: string | null
+          is_instructor?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          live_session_id?: string
+          profile_id?: string | null
+          message?: string
+          sender_name?: string | null
+          is_instructor?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_chat_messages_live_session_id_fkey"
+            columns: ["live_session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_chat_messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracks: {
         Row: {
           id: string
