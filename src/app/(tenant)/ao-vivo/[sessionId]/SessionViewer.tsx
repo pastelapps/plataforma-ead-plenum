@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { MuxLivePlayer } from '@/components/player/MuxLivePlayer'
 import { LiveChat } from '@/components/live/LiveChat'
+import { createClient } from '@/lib/supabase/client'
 import { Clock, Radio, Video } from 'lucide-react'
 
 interface SessionViewerProps {
@@ -19,7 +21,7 @@ interface SessionViewerProps {
 
 export function SessionViewer({
   sessionId,
-  status,
+  status: initialStatus,
   playbackId,
   recordingPlaybackId,
   recordingAvailable,
@@ -28,7 +30,28 @@ export function SessionViewer({
   profileId,
   profileName,
 }: SessionViewerProps) {
+  const router = useRouter()
+  const [status, setStatus] = useState(initialStatus)
   const [countdown, setCountdown] = useState('')
+
+  // Subscribe to session status changes (admin opens/closes live)
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`session-${sessionId}`)
+      .on('broadcast', { event: 'status_changed' }, (payload) => {
+        const newStatus = (payload.payload as any)?.status as string | undefined
+        if (newStatus && newStatus !== status) {
+          setStatus(newStatus)
+          // Refresh to pick up server data (e.g., recording_available on ended)
+          router.refresh()
+        }
+      })
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [sessionId, status, router])
 
   useEffect(() => {
     if (status !== 'scheduled') return
