@@ -2,7 +2,7 @@
 
 import { LiveChat } from '@/components/live/LiveChat'
 import { Card, CardContent } from '@/components/ui/card'
-import { MessageSquare, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 
 interface AdminChatPanelProps {
   sessionId: string
@@ -11,18 +11,6 @@ interface AdminChatPanelProps {
 }
 
 export function AdminChatPanel({ sessionId, status, adminName }: AdminChatPanelProps) {
-  if (status === 'ended') {
-    return (
-      <Card className="h-[400px] flex items-center justify-center">
-        <CardContent className="text-center">
-          <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm text-gray-400">Sessao encerrada</p>
-          <p className="text-xs text-gray-400 mt-1">O chat nao esta mais disponivel</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
   if (status === 'scheduled') {
     return (
       <Card className="h-[400px] flex items-center justify-center">
@@ -37,6 +25,7 @@ export function AdminChatPanel({ sessionId, status, adminName }: AdminChatPanelP
     )
   }
 
+  // live ou ended - mostra chat (readonly quando ended)
   return (
     <div className="h-[500px] lg:h-[600px]">
       <LiveChat
@@ -44,6 +33,8 @@ export function AdminChatPanel({ sessionId, status, adminName }: AdminChatPanelP
         profileId={null}
         profileName={adminName}
         isInstructor
+        readOnly={status === 'ended'}
+        profileLinkTargetBlank
       />
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Send, AlertCircle } from 'lucide-react'
 
@@ -22,6 +23,11 @@ interface LiveChatProps {
   profileId?: string | null
   profileName: string
   isInstructor?: boolean
+  readOnly?: boolean
+  // Base para abrir o perfil ao clicar num nome. Padrao /alunos para tenant.
+  profileLinkBase?: string
+  // Abrir perfil em nova aba (admin em outro dominio, por ex.)
+  profileLinkTargetBlank?: boolean
 }
 
 function getInitials(name: string | null) {
@@ -42,7 +48,15 @@ function formatTime(dateStr: string | null) {
   })
 }
 
-export function LiveChat({ sessionId, profileId, profileName, isInstructor = false }: LiveChatProps) {
+export function LiveChat({
+  sessionId,
+  profileId,
+  profileName,
+  isInstructor = false,
+  readOnly = false,
+  profileLinkBase = '/alunos',
+  profileLinkTargetBlank = false,
+}: LiveChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -296,8 +310,17 @@ export function LiveChat({ sessionId, profileId, profileName, isInstructor = fal
           color: 'var(--color-text, #111827)',
         }}
       >
-        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-        Chat ao vivo
+        {readOnly ? (
+          <>
+            <div className="w-2 h-2 rounded-full bg-gray-400" />
+            Histórico do chat (encerrado)
+          </>
+        ) : (
+          <>
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            Chat ao vivo
+          </>
+        )}
       </div>
 
       {/* Messages area */}
@@ -318,36 +341,67 @@ export function LiveChat({ sessionId, profileId, profileName, isInstructor = fal
           const isOwn = isOwnMessage(msg)
           const displayName = getDisplayName(msg)
           const isTemp = msg.id.startsWith('temp-')
+          const canLink = !!msg.profile?.id && !isOwn && !isTemp
+          const linkHref = canLink ? `${profileLinkBase}/${msg.profile!.id}` : null
+
+          const avatar = (
+            <div
+              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+              style={{
+                backgroundColor: msg.is_instructor
+                  ? '#dc2626'
+                  : isOwn
+                  ? 'var(--color-primary, #3b82f6)'
+                  : 'var(--color-card-border, #e5e7eb)',
+                color: msg.is_instructor || isOwn ? 'white' : 'var(--color-text-secondary, #6b7280)',
+              }}
+            >
+              {msg.is_instructor ? 'P' : getInitials(displayName)}
+            </div>
+          )
+
+          const nameSpan = (
+            <span
+              className="text-xs font-semibold truncate"
+              style={{
+                color: msg.is_instructor
+                  ? '#dc2626'
+                  : isOwn
+                  ? 'var(--color-primary, #3b82f6)'
+                  : 'var(--color-text-secondary, #6b7280)',
+                ...(canLink ? { cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'transparent', textUnderlineOffset: '2px' } : {}),
+              }}
+            >
+              {displayName}
+            </span>
+          )
+
           return (
             <div key={msg.id} className={`flex items-start gap-2 ${isTemp ? 'opacity-60' : ''}`}>
-              <div
-                className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-                style={{
-                  backgroundColor: msg.is_instructor
-                    ? '#dc2626'
-                    : isOwn
-                    ? 'var(--color-primary, #3b82f6)'
-                    : 'var(--color-card-border, #e5e7eb)',
-                  color: msg.is_instructor || isOwn ? 'white' : 'var(--color-text-secondary, #6b7280)',
-                }}
-              >
-                {msg.is_instructor ? 'P' : getInitials(displayName)}
-              </div>
+              {canLink && linkHref ? (
+                <Link
+                  href={linkHref}
+                  target={profileLinkTargetBlank ? '_blank' : undefined}
+                  rel={profileLinkTargetBlank ? 'noopener noreferrer' : undefined}
+                  aria-label={`Ver perfil de ${displayName}`}
+                  className="shrink-0"
+                >
+                  {avatar}
+                </Link>
+              ) : avatar}
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span
-                    className="text-xs font-semibold truncate"
-                    style={{
-                      color: msg.is_instructor
-                        ? '#dc2626'
-                        : isOwn
-                        ? 'var(--color-primary, #3b82f6)'
-                        : 'var(--color-text-secondary, #6b7280)',
-                    }}
-                  >
-                    {displayName}
-                  </span>
+                  {canLink && linkHref ? (
+                    <Link
+                      href={linkHref}
+                      target={profileLinkTargetBlank ? '_blank' : undefined}
+                      rel={profileLinkTargetBlank ? 'noopener noreferrer' : undefined}
+                      className="hover:underline"
+                    >
+                      {nameSpan}
+                    </Link>
+                  ) : nameSpan}
                   {msg.is_instructor && (
                     <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-600">
                       Professor
@@ -371,44 +425,58 @@ export function LiveChat({ sessionId, profileId, profileName, isInstructor = fal
       </div>
 
       {/* Send error */}
-      {sendError && (
+      {sendError && !readOnly && (
         <div className="px-3 py-1.5 bg-red-50 border-t border-red-100">
           <p className="text-xs text-red-600">Erro ao enviar: {sendError}</p>
         </div>
       )}
 
-      {/* Input */}
-      <div
-        className="border-t px-3 py-2 flex items-center gap-2"
-        style={{ borderColor: 'var(--color-card-border, #e5e7eb)' }}
-      >
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => { setInput(e.target.value.slice(0, 500)); setSendError(null) }}
-          onKeyDown={handleKeyDown}
-          placeholder={isInstructor ? 'Mensagem como professor...' : 'Digite sua mensagem...'}
-          maxLength={500}
-          disabled={sending}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-500"
-          style={{ color: 'var(--color-text, #111827)' }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || sending}
-          className="shrink-0 p-2 rounded-lg transition-colors disabled:opacity-30"
-          style={{ backgroundColor: isInstructor ? '#dc2626' : 'var(--color-primary, #3b82f6)', color: 'white' }}
+      {/* Input / Readonly footer */}
+      {readOnly ? (
+        <div
+          className="border-t px-3 py-2 text-center text-xs"
+          style={{
+            borderColor: 'var(--color-card-border, #e5e7eb)',
+            color: 'var(--color-text-muted, #9ca3af)',
+          }}
         >
-          <Send className="h-4 w-4" />
-        </button>
-      </div>
-
-      {input.length > 400 && (
-        <div className="px-3 pb-1">
-          <span className="text-xs" style={{ color: input.length >= 500 ? '#ef4444' : 'var(--color-text-muted, #9ca3af)' }}>
-            {input.length}/500
-          </span>
+          Esta sessao foi encerrada. Voce pode revisar o historico acima.
         </div>
+      ) : (
+        <>
+          <div
+            className="border-t px-3 py-2 flex items-center gap-2"
+            style={{ borderColor: 'var(--color-card-border, #e5e7eb)' }}
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => { setInput(e.target.value.slice(0, 500)); setSendError(null) }}
+              onKeyDown={handleKeyDown}
+              placeholder={isInstructor ? 'Mensagem como professor...' : 'Digite sua mensagem...'}
+              maxLength={500}
+              disabled={sending}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-500"
+              style={{ color: 'var(--color-text, #111827)' }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || sending}
+              className="shrink-0 p-2 rounded-lg transition-colors disabled:opacity-30"
+              style={{ backgroundColor: isInstructor ? '#dc2626' : 'var(--color-primary, #3b82f6)', color: 'white' }}
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+
+          {input.length > 400 && (
+            <div className="px-3 pb-1">
+              <span className="text-xs" style={{ color: input.length >= 500 ? '#ef4444' : 'var(--color-text-muted, #9ca3af)' }}>
+                {input.length}/500
+              </span>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

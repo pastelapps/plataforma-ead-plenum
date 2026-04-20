@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Search } from 'lucide-react'
 
 interface Profile {
@@ -65,9 +66,10 @@ export function NetworkGrid({ profiles, currentProfileId }: { profiles: Profile[
         {filtered.map((p) => {
           const isMe = p.id === currentProfileId
           return (
-            <div
+            <Link
               key={p.id}
-              className="flex flex-col items-center p-4 rounded-2xl transition-colors"
+              href={`/alunos/${p.id}`}
+              className="flex flex-col items-center p-4 rounded-2xl transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               style={{
                 backgroundColor: isMe ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
                 border: isMe ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(255,255,255,0.06)',
@@ -93,7 +95,7 @@ export function NetworkGrid({ profiles, currentProfileId }: { profiles: Profile[
                   {p.department}
                 </p>
               )}
-            </div>
+            </Link>
           )
         })}
       </div>

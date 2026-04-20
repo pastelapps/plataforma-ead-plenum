@@ -113,27 +113,49 @@ export function SessionViewer({
     )
   }
 
-  // Ended with recording available - player only, no chat
+  // Ended with recording available - recording + chat history side by side
   if (status === 'ended' && recordingAvailable && recordingPlaybackId) {
     return (
-      <div className="max-w-5xl">
-        <div className="flex items-center gap-2 mb-4 text-gray-400">
-          <Video className="h-4 w-4" /> Gravação da sessão
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="lg:w-[70%]">
+          <div className="flex items-center gap-2 mb-3 text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            <Video className="h-4 w-4" /> Gravação da sessão
+          </div>
+          <div className="rounded-xl overflow-hidden">
+            <MuxLivePlayer playbackId={recordingPlaybackId} streamType="on-demand" title={title} />
+          </div>
         </div>
-        <div className="rounded-xl overflow-hidden">
-          <MuxLivePlayer playbackId={recordingPlaybackId} streamType="on-demand" title={title} />
+        <div className="lg:w-[30%] h-[400px] lg:h-auto lg:min-h-[500px]">
+          <LiveChat
+            sessionId={sessionId}
+            profileId={profileId}
+            profileName={profileName}
+            readOnly
+          />
         </div>
       </div>
     )
   }
 
-  // Ended without recording
+  // Ended without recording - chat history available
   if (status === 'ended') {
     return (
-      <div className="rounded-xl bg-white/5 border border-white/10 p-12 text-center">
-        <Video className="h-12 w-12 mx-auto mb-4 text-gray-600" />
-        <p className="text-gray-400 text-lg">Sessão encerrada</p>
-        <p className="text-gray-500 text-sm mt-1">A gravação ainda não foi disponibilizada pelo administrador.</p>
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="lg:w-[70%]">
+          <div className="rounded-xl bg-white/5 border border-white/10 p-12 text-center">
+            <Video className="h-12 w-12 mx-auto mb-4 text-gray-600" />
+            <p className="text-gray-400 text-lg">Sessão encerrada</p>
+            <p className="text-gray-500 text-sm mt-1">A gravação ainda não foi disponibilizada. Você pode revisar o chat ao lado.</p>
+          </div>
+        </div>
+        <div className="lg:w-[30%] h-[400px] lg:h-auto lg:min-h-[500px]">
+          <LiveChat
+            sessionId={sessionId}
+            profileId={profileId}
+            profileName={profileName}
+            readOnly
+          />
+        </div>
       </div>
     )
   }
