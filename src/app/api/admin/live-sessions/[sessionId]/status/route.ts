@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerComponentClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { mux } from '@/lib/mux/client'
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   scheduled: ['live'],
   live: ['ended'],
+}
+
+async function teardownMuxLiveStream(liveStreamId: string) {
+  // 1) Complete: encerra a transmissao ativa (se houver) e finaliza o asset
+  // 2) Disable: impede que o OBS volte a conectar com a mesma stream key
+  // Falhas nao devem bloquear o encerramento no banco - apenas logamos.
+  try {
+    await mux.video.liveStreams.complete(liveStreamId)
+  } catch (e: any) {
+    console.warn('[mux.complete] falhou:', e?.message ?? e)
+  }
+  try {
+    await mux.video.liveStreams.disable(liveStreamId)
+  } catch (e: any) {
+    console.warn('[mux.disable] falhou:', e?.message ?? e)
+  }
 }
 
 export async function PATCH(
@@ -14,14 +31,12 @@ export async function PATCH(
   const supabase = await createServerComponentClient()
   const serviceClient = createServiceRoleClient()
 
-  // Verify auth
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Verify org admin
   const { data: session } = await (serviceClient
     .from('live_sessions') as any)
-    .select('id, status, organization_id')
+    .select('id, status, organization_id, mux_live_stream_id')
     .eq('id', sessionId)
     .single()
 
@@ -51,7 +66,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'Missing status' }, { status: 400 })
   }
 
-  // Validate transition
   const allowed = VALID_TRANSITIONS[s.status] ?? []
   if (!allowed.includes(newStatus)) {
     return NextResponse.json(
@@ -60,7 +74,6 @@ export async function PATCH(
     )
   }
 
-  // Build update payload
   const update: Record<string, any> = { status: newStatus }
 
   if (newStatus === 'live' && s.status === 'scheduled') {
@@ -80,6 +93,12 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Apos marcar como encerrada no banco, fecha o stream no Mux
+  // (complete finaliza broadcast ativo e gera asset; disable bloqueia novas conexoes)
+  if (newStatus === 'ended' && s.mux_live_stream_id) {
+    await teardownMuxLiveStream(s.mux_live_stream_id)
   }
 
   return NextResponse.json(updated)
