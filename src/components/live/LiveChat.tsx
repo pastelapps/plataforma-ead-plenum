@@ -113,60 +113,51 @@ export function LiveChat({ sessionId, profileId, profileName, isInstructor = fal
     init()
   }, [fetchMessages])
 
-  // Try Supabase Realtime, fallback to polling
+  // Realtime via Broadcast (disparado por trigger no banco)
+  // Fallback para polling caso o websocket nao conecte
   useEffect(() => {
     const supabase = createClient()
 
+    const handleNewMessage = (newMsg: any) => {
+      realtimeConnected.current = true
+      const chatMsg: ChatMessage = {
+        id: newMsg.id,
+        message: newMsg.message,
+        created_at: newMsg.created_at,
+        is_instructor: newMsg.is_instructor ?? false,
+        sender_name: newMsg.sender_name,
+        profile: newMsg.profile_id
+          ? { id: newMsg.profile_id, full_name: newMsg.sender_name, avatar_url: null }
+          : null,
+      }
+
+      setMessages(prev => {
+        const withoutOptimistic = prev.filter(m => {
+          if (!m.id.startsWith('temp-')) return true
+          return m.message !== chatMsg.message
+        })
+        if (withoutOptimistic.some(m => m.id === chatMsg.id)) return withoutOptimistic
+        return [...withoutOptimistic, chatMsg]
+      })
+    }
+
     const channel = supabase
-      .channel(`live-chat-${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'ead',
-          table: 'live_chat_messages',
-          filter: `live_session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          realtimeConnected.current = true
-          const newMsg = payload.new as any
-
-          const chatMsg: ChatMessage = {
-            id: newMsg.id,
-            message: newMsg.message,
-            created_at: newMsg.created_at,
-            is_instructor: newMsg.is_instructor ?? false,
-            sender_name: newMsg.sender_name,
-            profile: newMsg.profile_id
-              ? { id: newMsg.profile_id, full_name: newMsg.sender_name, avatar_url: null }
-              : null,
-          }
-
-          setMessages(prev => {
-            // Remove any temp message with same content (optimistic that was confirmed)
-            const withoutOptimistic = prev.filter(m => {
-              if (!m.id.startsWith('temp-')) return true
-              // Remove optimistic if this real message has same content
-              return m.message !== chatMsg.message
-            })
-            if (withoutOptimistic.some(m => m.id === chatMsg.id)) return withoutOptimistic
-            return [...withoutOptimistic, chatMsg]
-          })
-        }
-      )
+      .channel(`chat-${sessionId}`)
+      .on('broadcast', { event: 'new_message' }, (payload) => {
+        handleNewMessage(payload.payload)
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           realtimeConnected.current = true
         }
       })
 
-    // Fallback polling: merge every 4s if Realtime not connected
+    // Fallback polling a cada 4s se websocket nao conectou em 2.5s
     const fallbackTimeout = setTimeout(() => {
       if (!realtimeConnected.current) {
-        console.log('Realtime not connected, using polling fallback')
         pollingRef.current = setInterval(() => {
           if (!realtimeConnected.current) {
-            fetchMessages(false) // merge, don't replace
+            fetchMessages(false)
           }
         }, 4000)
       }
