@@ -44,7 +44,21 @@ export async function middleware(request: NextRequest) {
 
   // Create supabase client and get session
   const { supabase, response } = createMiddlewareClient(request)
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { session }, error } = await supabase.auth.getSession()
+
+  // If refresh token is invalid, clear auth cookies and redirect to login
+  if (error) {
+    const isAdmin = pathname.startsWith('/admin') || pathname.startsWith('/tenant-admin')
+    const loginPath = isAdmin ? '/admin/login' : '/login'
+    const redirectRes = NextResponse.redirect(new URL(loginPath, request.url))
+    // Clear all supabase auth cookies to break the loop
+    request.cookies.getAll().forEach(c => {
+      if (c.name.startsWith('sb-')) {
+        redirectRes.cookies.delete(c.name)
+      }
+    })
+    return redirectRes
+  }
 
   // ── ADMIN ROUTES (org admin) ──
   if (pathname.startsWith('/admin')) {
