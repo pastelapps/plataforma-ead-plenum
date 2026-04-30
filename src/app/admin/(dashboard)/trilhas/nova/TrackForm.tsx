@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/lib/supabase/client'
-import { Check, X } from 'lucide-react'
+import { Check, X, Trash2 } from 'lucide-react'
 
 interface Course {
   id: string
@@ -17,9 +18,18 @@ interface Course {
   status: string
 }
 
+interface ExistingTrack {
+  id: string
+  title: string
+  description: string | null
+  active: boolean
+  selectedCourseIds: string[]
+}
+
 interface TrackFormProps {
   organizationId: string
   courses: Course[]
+  existing?: ExistingTrack
 }
 
 function slugify(text: string): string {
@@ -31,12 +41,16 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function TrackForm({ organizationId, courses }: TrackFormProps) {
+export function TrackForm({ organizationId, courses, existing }: TrackFormProps) {
   const router = useRouter()
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([])
+  const isEdit = !!existing
+  const [title, setTitle] = useState(existing?.title ?? '')
+  const [description, setDescription] = useState(existing?.description ?? '')
+  const [active, setActive] = useState(existing?.active ?? true)
+  const [selectedCourses, setSelectedCourses] = useState<string[]>(existing?.selectedCourseIds ?? [])
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState('')
 
   const toggleCourse = (courseId: string) => {
@@ -57,28 +71,60 @@ export function TrackForm({ organizationId, courses }: TrackFormProps) {
     const supabase = createClient()
     const slug = slugify(title)
 
-    // Create track
-    const { data: track, error: trackError } = await (supabase
-      .from('tracks') as any)
-      .insert({
-        organization_id: organizationId,
-        title: title.trim(),
-        slug,
-        description: description.trim() || null,
-      })
-      .select()
-      .single()
+    let trackId: string
 
-    if (trackError) {
-      setError(trackError.message)
-      setSaving(false)
-      return
+    if (isEdit) {
+      const { error: updateError } = await (supabase
+        .from('tracks') as any)
+        .update({
+          title: title.trim(),
+          slug,
+          description: description.trim() || null,
+          active,
+        })
+        .eq('id', existing!.id)
+
+      if (updateError) {
+        setError(updateError.message)
+        setSaving(false)
+        return
+      }
+      trackId = existing!.id
+
+      // Resync track_courses: delete all then insert selected
+      const { error: delAssocErr } = await (supabase
+        .from('track_courses') as any)
+        .delete()
+        .eq('track_id', trackId)
+
+      if (delAssocErr) {
+        setError(delAssocErr.message)
+        setSaving(false)
+        return
+      }
+    } else {
+      const { data: track, error: trackError } = await (supabase
+        .from('tracks') as any)
+        .insert({
+          organization_id: organizationId,
+          title: title.trim(),
+          slug,
+          description: description.trim() || null,
+        })
+        .select()
+        .single()
+
+      if (trackError) {
+        setError(trackError.message)
+        setSaving(false)
+        return
+      }
+      trackId = (track as any).id
     }
 
-    // Associate courses
     if (selectedCourses.length > 0) {
       const trackCourses = selectedCourses.map((courseId, idx) => ({
-        track_id: track.id,
+        track_id: trackId,
         course_id: courseId,
         position: idx,
       }))
@@ -92,6 +138,30 @@ export function TrackForm({ organizationId, courses }: TrackFormProps) {
         setSaving(false)
         return
       }
+    }
+
+    router.push('/admin/trilhas')
+    router.refresh()
+  }
+
+  const handleDelete = async () => {
+    if (!isEdit) return
+    setDeleting(true)
+    setError('')
+
+    const supabase = createClient()
+    // track_courses tem ON DELETE CASCADE? caso nao, deletar antes
+    await (supabase.from('track_courses') as any).delete().eq('track_id', existing!.id)
+
+    const { error: delError } = await (supabase
+      .from('tracks') as any)
+      .delete()
+      .eq('id', existing!.id)
+
+    if (delError) {
+      setError(delError.message)
+      setDeleting(false)
+      return
     }
 
     router.push('/admin/trilhas')
@@ -124,6 +194,19 @@ export function TrackForm({ organizationId, courses }: TrackFormProps) {
               rows={3}
             />
           </div>
+          {isEdit && (
+            <div className="flex items-center gap-3 pt-2">
+              <Switch checked={active} onCheckedChange={setActive} />
+              <div>
+                <Label className="cursor-pointer" onClick={() => setActive(!active)}>
+                  Ativa
+                </Label>
+                <p className="text-xs text-gray-500">
+                  Trilhas inativas nao aparecem para os alunos
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -184,13 +267,52 @@ export function TrackForm({ organizationId, courses }: TrackFormProps) {
         </div>
       )}
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? 'Salvando...' : 'Criar Trilha'}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={saving || deleting}>
+          {saving ? 'Salvando...' : isEdit ? 'Salvar alteracoes' : 'Criar Trilha'}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar
         </Button>
+
+        {isEdit && (
+          <div className="ml-auto">
+            {!confirmDelete ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => setConfirmDelete(true)}
+                disabled={saving || deleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir trilha
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <span className="text-sm text-red-600 font-medium">Confirmar exclusao?</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                >
+                  {deleting ? 'Excluindo...' : 'Sim, excluir'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </form>
   )
